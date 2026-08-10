@@ -100,6 +100,7 @@ function MonthDialog({
       </Field>
       <Field label="Month" error={form.formState.errors.monthNo?.message}>
         <Select
+          items={MONTH_NAMES.map((name, i) => ({ value: String(i + 1), label: name }))}
           value={form.watch('monthNo')}
           onValueChange={(v) => form.setValue('monthNo', v ?? '', { shouldValidate: true })}
         >
@@ -194,6 +195,7 @@ function MonthsPage() {
                     </TableCell>
                     <TableCell>
                       <Select
+                        items={members?.filter((mb) => mb.active).map((mb) => ({ value: mb.id, label: mb.name }))}
                         value={m.managerId ?? undefined}
                         onValueChange={(v) => v !== null && setManager.mutate({ monthId: m.id, memberId: v })}
                         disabled={m.closed || !isAdmin}

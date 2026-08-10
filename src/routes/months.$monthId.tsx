@@ -83,6 +83,7 @@ function MonthDetailPage() {
             Manager:
             <span className="ml-2 inline-block align-middle">
               <Select
+                items={members?.filter((m) => m.active).map((m) => ({ value: m.id, label: m.name }))}
                 value={month.managerId ?? 0}
                 onValueChange={(v) => v !== null && setManager.mutate({ monthId: id, memberId: v })}
                 disabled={closed || !isAdmin}

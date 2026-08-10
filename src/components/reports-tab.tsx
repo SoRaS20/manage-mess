@@ -161,7 +161,7 @@ export function ReportsTab({ monthId }: { monthId: number }) {
           <CardHeader>
             <CardTitle className="text-base">Member report</CardTitle>
             <CardDescription>Per-member breakdown for this month.</CardDescription>
-            <Select value={memberId} onValueChange={(v) => setMemberId(Number(v))}>
+            <Select items={members?.map((m) => ({ value: m.id, label: m.name }))} value={memberId} onValueChange={(v) => setMemberId(Number(v))}>
               <SelectTrigger className="max-w-56">
                 <SelectValue placeholder="Select member" />
               </SelectTrigger>

@@ -74,7 +74,7 @@ function MemberSelectField({
 }) {
   const { data: members } = useMembers()
   return (
-    <Select value={value} onValueChange={(v) => v !== null && onChange(v)} disabled={disabled}>
+    <Select items={members?.map((m) => ({ value: String(m.id), label: m.name }))} value={value} onValueChange={(v) => v !== null && onChange(v)} disabled={disabled}>
       <SelectTrigger className="w-full">
         <SelectValue placeholder="Select member" />
       </SelectTrigger>
@@ -176,6 +176,7 @@ export function BazarLedger({ monthId, closed, managerId }: { monthId: number; c
   const isManagerOrAdmin = user?.role === 'ADMIN' || (user?.memberId !== null && user?.memberId === managerId)
   const { data, isLoading } = useBazar(monthId)
   const create = useCreateBazar(monthId)
+  const createDeposit = useCreateDeposit(monthId)
   const update = useUpdateBazar(monthId)
   const remove = useDeleteBazar(monthId)
   const [dialog, setDialog] = useState<{ open: boolean; edit: Bazar | null }>({ open: false, edit: null })
@@ -229,7 +230,7 @@ export function BazarLedger({ monthId, closed, managerId }: { monthId: number; c
         monthId={monthId}
         open={dialog.open}
         edit={dialog.edit}
-        submitting={create.isPending || update.isPending}
+        submitting={create.isPending || update.isPending || createDeposit.isPending}
         onOpenChange={(v) => setDialog((d) => ({ ...d, open: v }))}
         onSubmit={async (values, existing) => {
           const payload = {
@@ -239,8 +240,20 @@ export function BazarLedger({ monthId, closed, managerId }: { monthId: number; c
             description: values.description || undefined,
             bazarDate: values.bazarDate,
           }
-          if (existing) await update.mutateAsync({ id: existing.id, data: payload })
-          else await create.mutateAsync(payload)
+          if (existing) {
+            await update.mutateAsync({ id: existing.id, data: payload })
+          } else {
+            await create.mutateAsync(payload)
+            // A bazar entry is money the member spent on behalf of the mess,
+            // so it also counts as a deposit from that member.
+            await createDeposit.mutateAsync({
+              member: { id: Number(values.memberId) },
+              month: { id: monthId },
+              amount: Number(values.amount),
+              depositDate: values.bazarDate,
+              description: values.description ? `Bazar: ${values.description}` : 'Bazar',
+            })
+          }
           setDialog({ open: false, edit: null })
         }}
       />
@@ -327,6 +340,7 @@ export function ExpensesLedger({ monthId, closed, managerId }: { monthId: number
   const isManagerOrAdmin = user?.role === 'ADMIN' || (user?.memberId !== null && user?.memberId === managerId)
   const { data, isLoading } = useExpenses(monthId)
   const create = useCreateExpense(monthId)
+  const createDeposit = useCreateDeposit(monthId)
   const update = useUpdateExpense(monthId)
   const remove = useDeleteExpense(monthId)
   const [dialog, setDialog] = useState<{ open: boolean; edit: Expense | null }>({ open: false, edit: null })
@@ -380,7 +394,7 @@ export function ExpensesLedger({ monthId, closed, managerId }: { monthId: number
         monthId={monthId}
         open={dialog.open}
         edit={dialog.edit}
-        submitting={create.isPending || update.isPending}
+        submitting={create.isPending || update.isPending || createDeposit.isPending}
         onOpenChange={(v) => setDialog((d) => ({ ...d, open: v }))}
         onSubmit={async (values, existing) => {
           const paidById = values.paidById && values.paidById !== 'none' ? Number(values.paidById) : undefined
@@ -392,8 +406,22 @@ export function ExpensesLedger({ monthId, closed, managerId }: { monthId: number
             expenseDate: values.expenseDate,
             paidBy: paidById ? { id: paidById } : undefined,
           }
-          if (existing) await update.mutateAsync({ id: existing.id, data: payload })
-          else await create.mutateAsync(payload)
+          if (existing) {
+            await update.mutateAsync({ id: existing.id, data: payload })
+          } else {
+            await create.mutateAsync(payload)
+            // The member who paid the expense fronted the money, so it also
+            // counts as a deposit from them. Only when a payer is set.
+            if (paidById) {
+              await createDeposit.mutateAsync({
+                member: { id: paidById },
+                month: { id: monthId },
+                amount: Number(values.amount),
+                depositDate: values.expenseDate,
+                description: values.description ? `Expense: ${values.description}` : `Expense: ${values.category}`,
+              })
+            }
+          }
           setDialog({ open: false, edit: null })
         }}
       />
@@ -453,7 +481,7 @@ function ExpenseDialog({
           <Input type="number" step="0.01" min={0} {...form.register('amount')} />
         </Field>
         <Field label="Category" error={form.formState.errors.category?.message}>
-          <Select value={form.watch('category')} onValueChange={(v) => v !== null && form.setValue('category', v as ExpenseCategory, { shouldValidate: true })}>
+          <Select items={EXPENSE_CATEGORIES} value={form.watch('category')} onValueChange={(v) => v !== null && form.setValue('category', v as ExpenseCategory, { shouldValidate: true })}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
@@ -475,7 +503,7 @@ function ExpenseDialog({
           <Input type="date" {...form.register('expenseDate')} />
         </Field>
         <Field label="Paid by" error={form.formState.errors.paidById?.message}>
-          <Select value={form.watch('paidById')} onValueChange={(v) => v !== null && form.setValue('paidById', v, { shouldValidate: true })}>
+          <Select items={[{ value: 'none', label: 'Not set' }, ...(members?.map((m) => ({ value: String(m.id), label: m.name })) ?? [])]} value={form.watch('paidById')} onValueChange={(v) => v !== null && form.setValue('paidById', v, { shouldValidate: true })}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Paid by" />
             </SelectTrigger>

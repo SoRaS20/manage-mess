@@ -23,8 +23,12 @@ export function MonthSelect({
   loading?: boolean
   disabled?: boolean
 }) {
+  const items = months?.map((m) => ({
+    value: m.id,
+    label: `${monthLabel(m.year, m.monthNo)}${m.closed ? ' (closed)' : ''}`,
+  }))
   return (
-    <Select value={value} onValueChange={(v) => v !== null && onChange(v)} disabled={disabled || loading || !months?.length}>
+    <Select items={items} value={value} onValueChange={(v) => v !== null && onChange(v)} disabled={disabled || loading || !months?.length}>
       <SelectTrigger className={className} aria-label="Select month">
         <SelectValue placeholder="Select a month" />
       </SelectTrigger>

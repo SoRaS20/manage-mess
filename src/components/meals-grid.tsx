@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
-import { Pencil, Trash2, Wand2 } from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
-import { useGenerateMeals, useMembers, useMeals, useToggleMeal, useUpdateMeal, useDeleteMeal } from '@/api/hooks'
+import { useMembers, useMeals, useToggleMeal, useUpdateMeal, useDeleteMeal } from '@/api/hooks'
 import type { Meal, MealSlot } from '@/api/types'
 import { FormDialog } from '@/components/form-dialog'
 import { Badge } from '@/components/ui/badge'
@@ -24,7 +24,6 @@ export function MealsGrid({
   year,
   monthNo,
   closed,
-  managerId,
 }: {
   monthId: number
   year: number
@@ -34,11 +33,9 @@ export function MealsGrid({
 }) {
   const user = useAuthStore((s) => s.user)
   const isAdmin = user?.role === 'ADMIN'
-  const isManagerOrAdmin = isAdmin || (user?.memberId !== null && user?.memberId === managerId)
 
   const { data: meals, isLoading } = useMeals(monthId)
   const { data: members } = useMembers()
-  const generate = useGenerateMeals(monthId)
   const toggle = useToggleMeal(monthId)
   const updateMeal = useUpdateMeal(monthId)
   const deleteMeal = useDeleteMeal(monthId)
@@ -59,7 +56,7 @@ export function MealsGrid({
     return map
   }, [meals])
 
-  const rows = useMemo(() => {
+  const memberCols = useMemo(() => {
     const list = [...(members ?? [])].sort(
       (a, b) => Number(b.active) - Number(a.active) || a.name.localeCompare(b.name)
     )
@@ -73,7 +70,6 @@ export function MealsGrid({
     return list
   }, [members, meals])
 
-  const anyMeal = (meals?.length ?? 0) > 0
   const today = new Date()
 
   return (
@@ -82,11 +78,6 @@ export function MealsGrid({
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <p>Click a chip to toggle a meal slot (B 0.5 · L 1 · D 1).</p>
         </div>
-        {isManagerOrAdmin && (
-          <Button size="sm" variant="outline" onClick={() => generate.mutate()} disabled={closed || generate.isPending || anyMeal}>
-            <Wand2 /> Generate meals
-          </Button>
-        )}
       </div>
 
       {isLoading ? (
@@ -95,55 +86,52 @@ export function MealsGrid({
             <Skeleton key={i} className="h-10 w-full" />
           ))}
         </div>
-      ) : rows.length === 0 ? (
+      ) : memberCols.length === 0 ? (
         <p className="py-12 text-center text-sm text-muted-foreground">
-          No members yet — add members first, then generate meals.
+          No members yet — add members first to start tracking meals.
         </p>
       ) : (
         <div className="overflow-auto rounded-lg border">
           <table className="w-full border-collapse text-xs">
             <thead>
               <tr>
-                <th className="sticky left-0 z-10 min-w-32 border-b border-r bg-muted px-3 py-2 text-left font-medium">
-                  Member
+                <th className="sticky left-0 z-10 min-w-24 border-b border-r bg-muted px-3 py-2 text-left font-medium">
+                  Date
                 </th>
-                {days.map((d) => {
-                  const date = new Date(year, monthNo - 1, d)
-                  const isToday = today.getFullYear() === year && today.getMonth() === monthNo - 1 && today.getDate() === d
-                  return (
-                    <th
-                      key={d}
+                {memberCols.map((member) => (
+                  <th
+                    key={member.id}
+                    className="min-w-20 border-b border-r bg-muted px-1 py-2 text-center font-medium"
+                  >
+                    {member.name}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {days.map((d) => {
+                const date = new Date(year, monthNo - 1, d)
+                const dow = date.getDay()
+                const isWeekend = dow === 5 || dow === 6
+                const isToday = today.getFullYear() === year && today.getMonth() === monthNo - 1 && today.getDate() === d
+                return (
+                  <tr key={d} className="group">
+                    <td
                       className={cn(
-                        'min-w-11 border-b border-r bg-muted px-1 py-2 text-center font-medium tabular-nums',
-                        date.getDay() === 0 && 'text-red-500',
+                        'sticky left-0 z-10 border-b border-r bg-background px-3 py-1.5 font-medium tabular-nums',
+                        isWeekend && 'text-red-500',
                         isToday && 'bg-primary/10 ring-1 ring-inset ring-primary/40'
                       )}
                     >
                       {d}
-                      <span className="block text-[10px] font-normal text-muted-foreground">
+                      <span className={cn('ml-1.5 text-[10px] font-normal', isWeekend ? 'text-red-500/80' : 'text-muted-foreground')}>
                         {date.toLocaleDateString('en-US', { weekday: 'short' })}
                       </span>
-                    </th>
-                  )
-                })}
-                <th className="min-w-14 border-b bg-muted px-1 py-2 text-center font-medium">Count</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((member) => {
-                const memberMeals = days
-                  .map((d) => byKey.get(`${member.id}:${dateKey(year, monthNo, d)}`))
-                  .filter((m): m is Meal => !!m)
-                const total = memberMeals.reduce((sum, m) => sum + m.dailyCount, 0)
-                return (
-                  <tr key={member.id} className="group">
-                    <td className="sticky left-0 z-10 border-b border-r bg-background px-3 py-1.5 font-medium">
-                      {member.name}
                     </td>
-                    {days.map((d) => {
+                    {memberCols.map((member) => {
                       const meal = byKey.get(`${member.id}:${dateKey(year, monthNo, d)}`)
                       return (
-                        <td key={d} className="border-b border-r p-0.5">
+                        <td key={member.id} className="border-b border-r p-0.5">
                           {meal ? (
                             <div
                               className={cn(
@@ -186,13 +174,28 @@ export function MealsGrid({
                         </td>
                       )
                     })}
-                    <td className="border-b bg-muted/40 px-1 py-1.5 text-center font-semibold tabular-nums">
-                      {total > 0 ? total.toFixed(1) : '—'}
-                    </td>
                   </tr>
                 )
               })}
             </tbody>
+            <tfoot>
+              <tr>
+                <td className="sticky left-0 z-10 border-t border-r bg-muted px-3 py-1.5 text-left font-semibold">
+                  Count
+                </td>
+                {memberCols.map((member) => {
+                  const total = days
+                    .map((d) => byKey.get(`${member.id}:${dateKey(year, monthNo, d)}`))
+                    .filter((m): m is Meal => !!m)
+                    .reduce((sum, m) => sum + m.dailyCount, 0)
+                  return (
+                    <td key={member.id} className="border-t border-r bg-muted/40 px-1 py-1.5 text-center font-semibold tabular-nums">
+                      {total > 0 ? total.toFixed(1) : '—'}
+                    </td>
+                  )
+                })}
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
