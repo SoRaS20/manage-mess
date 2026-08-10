@@ -129,13 +129,13 @@ function MonthDetailPage() {
       ) : null}
 
       <Tabs value={activeTab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="meals">Meals</TabsTrigger>
-          <TabsTrigger value="bazar">Bazar</TabsTrigger>
-          <TabsTrigger value="expenses">Expenses</TabsTrigger>
-          <TabsTrigger value="deposits">Deposits</TabsTrigger>
-          <TabsTrigger value="rents">Rents</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
+        <TabsList className="w-full max-w-full justify-start overflow-x-auto">
+          <TabsTrigger value="meals" className="flex-none">Meals</TabsTrigger>
+          <TabsTrigger value="bazar" className="flex-none">Bazar</TabsTrigger>
+          <TabsTrigger value="expenses" className="flex-none">Expenses</TabsTrigger>
+          <TabsTrigger value="deposits" className="flex-none">Deposits</TabsTrigger>
+          <TabsTrigger value="rents" className="flex-none">Rents</TabsTrigger>
+          <TabsTrigger value="reports" className="flex-none">Reports</TabsTrigger>
         </TabsList>
         <TabsContent value="meals">
           <MealsGrid monthId={id} year={month.year} monthNo={month.monthNo} closed={closed} managerId={month.managerId ?? null} />
