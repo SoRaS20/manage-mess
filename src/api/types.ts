@@ -4,6 +4,7 @@ export type Member = {
   phone?: string
   joinDate: string
   active: boolean
+  banned: boolean
   userId?: number
 }
 
@@ -156,6 +157,10 @@ export type MemberPayload = {
   phone?: string
   joinDate: string
   active?: boolean
+  banned?: boolean
+  createAppUser?: boolean
+  username?: string
+  password?: string
 }
 
 export type MonthPayload = {

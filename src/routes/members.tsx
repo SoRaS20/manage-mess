@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Trash2, Ban, Undo2 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -41,6 +41,15 @@ const memberSchema = z.object({
     .optional()
     .refine((v) => !v || /^[0-9+\-\s]{6,20}$/.test(v), 'Phone must be 6–20 characters (digits, +, -)'),
   joinDate: z.string().min(1, 'Join date is required'),
+  createAppUser: z.boolean().optional(),
+  username: z.string().optional(),
+  password: z.string().optional(),
+}).refine(data => !data.createAppUser || (data.username && data.username.length >= 3), {
+  message: "Username is required (min 3 chars)",
+  path: ["username"]
+}).refine(data => !data.createAppUser || (data.password && data.password.length >= 6), {
+  message: "Password is required (min 6 chars)",
+  path: ["password"]
 })
 
 type MemberForm = z.infer<typeof memberSchema>
@@ -61,9 +70,11 @@ function MemberDialog({
   const form = useForm<MemberForm>({
     resolver: zodResolver(memberSchema),
     values: edit
-      ? { name: edit.name, phone: edit.phone ?? '', joinDate: edit.joinDate }
-      : { name: '', phone: '', joinDate: todayISO() },
+      ? { name: edit.name, phone: edit.phone ?? '', joinDate: edit.joinDate, createAppUser: false, username: '', password: '' }
+      : { name: '', phone: '', joinDate: todayISO(), createAppUser: false, username: '', password: '' },
   })
+  
+  const createAppUser = form.watch('createAppUser')
 
   return (
     <FormDialog
@@ -86,6 +97,31 @@ function MemberDialog({
       <Field label="Join date" error={form.formState.errors.joinDate?.message}>
         <Input type="date" {...form.register('joinDate')} />
       </Field>
+
+      {!edit && (
+        <div className="flex items-center gap-2 pt-2 pb-2">
+          <input
+            type="checkbox"
+            id="createAppUser"
+            {...form.register('createAppUser')}
+            className="size-4 rounded border-gray-300 text-primary"
+          />
+          <label htmlFor="createAppUser" className="text-sm font-medium leading-none cursor-pointer">
+            Grant App Access (Create User Login)
+          </label>
+        </div>
+      )}
+
+      {createAppUser && !edit && (
+        <div className="space-y-4 rounded-md border p-4 bg-muted/50">
+          <Field label="Username" error={form.formState.errors.username?.message}>
+            <Input {...form.register('username')} placeholder="e.g. rahman123" />
+          </Field>
+          <Field label="Password" error={form.formState.errors.password?.message}>
+            <Input type="password" {...form.register('password')} placeholder="••••••••" />
+          </Field>
+        </div>
+      )}
     </FormDialog>
   )
 }
@@ -101,9 +137,13 @@ function MembersPage() {
   const isAdmin = user?.role === 'ADMIN'
 
   const [dialog, setDialog] = useState<{ open: boolean; edit: Member | null }>({ open: false, edit: null })
-  const [deleteTarget, setDeleteTarget] = useState<Member | null>(null)
+  const [banTarget, setBanTarget] = useState<{ member: Member; action: 'ban' | 'unban' } | null>(null)
 
-  const sorted = [...(members ?? [])].sort((a, b) => a.name.localeCompare(b.name))
+  const sorted = [...(members ?? [])].sort((a, b) => {
+    if (a.banned && !b.banned) return 1
+    if (!a.banned && b.banned) return -1
+    return a.name.localeCompare(b.name)
+  })
 
   return (
     <div className="space-y-6">
@@ -111,7 +151,7 @@ function MembersPage() {
         <div>
           <h1 className="text-2xl font-semibold">Members</h1>
           <p className="text-sm text-muted-foreground">
-            {members?.length ?? 0} total · {members?.filter((m) => m.active).length ?? 0} active
+            {members?.length ?? 0} total · {members?.filter((m) => m.active && !m.banned).length ?? 0} active
           </p>
         </div>
         {isAdmin && (
@@ -148,14 +188,14 @@ function MembersPage() {
               </TableHeader>
               <TableBody>
                 {sorted.map((m) => (
-                  <TableRow key={m.id}>
-                    <TableCell className="font-medium">{m.name}</TableCell>
+                  <TableRow key={m.id} className={m.banned ? 'opacity-50 bg-muted/30' : ''}>
+                    <TableCell className="font-medium">{m.name} {m.banned && <span className="text-xs text-destructive ml-2">(Banned)</span>}</TableCell>
                     <TableCell className="text-muted-foreground">{m.phone || '—'}</TableCell>
                     <TableCell>{formatDate(m.joinDate)}</TableCell>
                     <TableCell>
                       <button
                         onClick={() => toggleActive.mutate(m.id)}
-                        disabled={toggleActive.isPending || !isAdmin}
+                        disabled={toggleActive.isPending || !isAdmin || m.banned}
                         title={m.active ? 'Deactivate' : 'Activate'}
                         className="flex items-center gap-1.5 text-xs font-medium disabled:opacity-50"
                       >
@@ -172,12 +212,18 @@ function MembersPage() {
                     <TableCell>
                       {isAdmin ? (
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => setDialog({ open: true, edit: m })}>
+                          <Button variant="ghost" size="icon" onClick={() => setDialog({ open: true, edit: m })} disabled={m.banned}>
                             <Pencil />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(m)}>
-                            <Trash2 className="text-destructive" />
-                          </Button>
+                          {m.banned ? (
+                            <Button variant="ghost" size="icon" onClick={() => setBanTarget({ member: m, action: 'unban' })}>
+                              <Undo2 className="text-primary" />
+                            </Button>
+                          ) : (
+                            <Button variant="ghost" size="icon" onClick={() => setBanTarget({ member: m, action: 'ban' })}>
+                              <Ban className="text-destructive" />
+                            </Button>
+                          )}
                         </div>
                       ) : null}
                     </TableCell>
@@ -195,7 +241,14 @@ function MembersPage() {
         submitting={create.isPending || update.isPending}
         onOpenChange={(v) => setDialog((d) => ({ ...d, open: v }))}
         onSave={async (values, existing) => {
-          const payload = { name: values.name, phone: values.phone || undefined, joinDate: values.joinDate }
+          const payload = { 
+            name: values.name, 
+            phone: values.phone || undefined, 
+            joinDate: values.joinDate,
+            createAppUser: values.createAppUser,
+            username: values.username,
+            password: values.password
+          }
           if (existing) await update.mutateAsync({ id: existing.id, data: payload })
           else await create.mutateAsync(payload)
           setDialog({ open: false, edit: null })
@@ -203,15 +256,27 @@ function MembersPage() {
       />
 
       <ConfirmDialog
-        open={deleteTarget !== null}
-        onOpenChange={(v) => !v && setDeleteTarget(null)}
-        title="Delete member"
-        description={deleteTarget ? `"${deleteTarget.name}" will be permanently removed.` : undefined}
-        submitting={remove.isPending}
+        open={banTarget !== null}
+        onOpenChange={(v) => !v && setBanTarget(null)}
+        title={banTarget?.action === 'ban' ? 'Ban member' : 'Unban member'}
+        description={
+          banTarget?.action === 'ban'
+            ? `"${banTarget.member.name}" will be banned. They will be deactivated and unable to generate meals, but their past records will be preserved.`
+            : `"${banTarget?.member.name}" will be unbanned and can be reactivated.`
+        }
+        submitting={update.isPending}
         onConfirm={async () => {
-          if (!deleteTarget) return
-          await remove.mutateAsync(deleteTarget.id)
-          setDeleteTarget(null)
+          if (!banTarget) return
+          await update.mutateAsync({ 
+            id: banTarget.member.id, 
+            data: { 
+              name: banTarget.member.name, 
+              joinDate: banTarget.member.joinDate,
+              banned: banTarget.action === 'ban', 
+              active: banTarget.action === 'ban' ? false : banTarget.member.active 
+            } 
+          })
+          setBanTarget(null)
         }}
       />
     </div>
