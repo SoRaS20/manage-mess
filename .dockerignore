@@ -1,0 +1,17 @@
+# Dependencies & build output (rebuilt inside the image)
+node_modules/
+dist/
+.vite/
+
+# IDE / editor
+.idea/
+.vscode/
+
+# VCS & logs
+.git/
+.gitignore
+*.log
+
+# Local env files
+.env
+.env.*
