@@ -5,6 +5,7 @@ import {
   dashboardApi,
   depositsApi,
   expensesApi,
+  ledgerApi,
   mealsApi,
   membersApi,
   monthsApi,
@@ -70,6 +71,10 @@ export function useDeposits(monthId: number) {
 
 export function useRents(monthId: number) {
   return useQuery({ queryKey: qk.rents(monthId), queryFn: () => rentsApi.byMonth(monthId) })
+}
+
+export function useLedger(monthId: number) {
+  return useQuery({ queryKey: ['ledger', monthId], queryFn: () => ledgerApi.byMonth(monthId) })
 }
 
 export function useMonthlyReport(monthId: number) {
@@ -149,6 +154,20 @@ export function useToggleMeal(monthId: number) {
         queryClient.invalidateQueries({ queryKey: qk.dashboard(monthId) }),
       ])
     },
+  })
+}
+
+export function useCreateMeal(monthId: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: import('./types').MealPayload) => mealsApi.create(data),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: qk.meals(monthId) }),
+        queryClient.invalidateQueries({ queryKey: qk.dashboard(monthId) }),
+      ])
+    },
+    onError: (error: Error) => toast.error(error.message),
   })
 }
 

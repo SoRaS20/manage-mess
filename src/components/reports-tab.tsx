@@ -66,12 +66,15 @@ export function ReportsTab({ monthId }: { monthId: number }) {
                 <TableRow>
                   <TableHead>Member</TableHead>
                   <TableHead className="text-right">Meals</TableHead>
-                  <TableHead className="text-right">Meal rate</TableHead>
                   <TableHead className="text-right">Meal cost</TableHead>
-                  <TableHead className="text-right">Expense share</TableHead>
-                  <TableHead className="text-right">Rent</TableHead>
-                  <TableHead className="text-right">Deposit</TableHead>
-                  <TableHead className="text-right">Balance</TableHead>
+                  <TableHead className="text-right">Exp share</TableHead>
+                  <TableHead className="text-right">Bazar contrib</TableHead>
+                  <TableHead className="text-right">Exp contrib</TableHead>
+                  <TableHead className="text-right">Food bal</TableHead>
+                  <TableHead className="text-right">Rent cost</TableHead>
+                  <TableHead className="text-right">Rent dep</TableHead>
+                  <TableHead className="text-right">Rent bal</TableHead>
+                  <TableHead className="text-right">Net bal</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -79,12 +82,19 @@ export function ReportsTab({ monthId }: { monthId: number }) {
                   <TableRow key={m.memberId}>
                     <TableCell className="font-medium">{m.memberName}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatNumber(m.meals)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatTaka(m.mealRate)}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatTaka(m.mealCost)}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatTaka(m.expenseShare)}</TableCell>
+                    <TableCell className="text-right tabular-nums text-blue-600">{formatTaka(m.bazarContribution)}</TableCell>
+                    <TableCell className="text-right tabular-nums text-blue-600">{formatTaka(m.expenseContribution)}</TableCell>
+                    <TableCell className={`text-right font-semibold tabular-nums ${m.foodBalance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                      {formatTaka(m.foodBalance)}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">{formatTaka(m.rent)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatTaka(m.deposit)}</TableCell>
-                    <TableCell className={`text-right font-semibold tabular-nums ${m.balance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                    <TableCell className="text-right tabular-nums text-purple-600">{formatTaka(m.deposit)}</TableCell>
+                    <TableCell className={`text-right font-semibold tabular-nums ${m.rentBalance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                      {formatTaka(m.rentBalance)}
+                    </TableCell>
+                    <TableCell className={`text-right font-bold tabular-nums ${m.balance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
                       {formatTaka(m.balance)}
                     </TableCell>
                   </TableRow>
@@ -92,8 +102,8 @@ export function ReportsTab({ monthId }: { monthId: number }) {
               </TableBody>
               <TableFooter>
                 <TableRow>
-                  <TableCell colSpan={3} className="font-semibold">
-                    Balance = meal cost + expense share + rent − deposit
+                  <TableCell colSpan={6} className="font-semibold text-xs">
+                    Food bal = (Bazar + Exp contrib) - (Meal cost + Exp share) <br/> Rent bal = Rent dep - Rent cost <br/> Net = Food + Rent bal
                   </TableCell>
                   <TableCell />
                   <TableCell />
@@ -183,28 +193,36 @@ export function ReportsTab({ monthId }: { monthId: number }) {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div className="rounded-lg bg-muted p-3">
-                    <p className="text-xs text-muted-foreground">Total meals</p>
-                    <p className="text-lg font-semibold tabular-nums">{formatNumber(memberReport.meals.totalCount)}</p>
+                    <p className="text-xs text-muted-foreground">Food/Utility cost</p>
+                    <p className="text-lg font-semibold tabular-nums text-muted-foreground">{formatTaka(memberReport.mealCost + memberReport.expenseShare)}</p>
                   </div>
                   <div className="rounded-lg bg-muted p-3">
-                    <p className="text-xs text-muted-foreground">Meal cost</p>
-                    <p className="text-lg font-semibold tabular-nums">{formatTaka(memberReport.mealCost)}</p>
+                    <p className="text-xs text-muted-foreground">Bazar + Exp Contrib</p>
+                    <p className="text-lg font-semibold tabular-nums text-blue-600">{formatTaka(memberReport.bazarContribution + memberReport.expenseContribution)}</p>
                   </div>
                   <div className="rounded-lg bg-muted p-3">
-                    <p className="text-xs text-muted-foreground">Expense share</p>
-                    <p className="text-lg font-semibold tabular-nums">{formatTaka(memberReport.expenseShare)}</p>
+                    <p className="text-xs text-muted-foreground">Food Balance</p>
+                    <p className={`text-lg font-semibold tabular-nums ${memberReport.foodBalance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                      {formatTaka(memberReport.foodBalance)}
+                    </p>
                   </div>
                   <div className="rounded-lg bg-muted p-3">
-                    <p className="text-xs text-muted-foreground">Rent</p>
-                    <p className="text-lg font-semibold tabular-nums">{formatTaka(memberReport.rent)}</p>
+                    <p className="text-xs text-muted-foreground">Rent Cost</p>
+                    <p className="text-lg font-semibold tabular-nums text-muted-foreground">{formatTaka(memberReport.rent)}</p>
                   </div>
                   <div className="rounded-lg bg-muted p-3">
-                    <p className="text-xs text-muted-foreground">Deposits</p>
-                    <p className="text-lg font-semibold tabular-nums">{formatTaka(memberReport.totalDeposit)}</p>
+                    <p className="text-xs text-muted-foreground">Rent Deposit</p>
+                    <p className="text-lg font-semibold tabular-nums text-purple-600">{formatTaka(memberReport.totalDeposit)}</p>
                   </div>
                   <div className="rounded-lg bg-muted p-3">
-                    <p className="text-xs text-muted-foreground">Balance</p>
-                    <p className={`text-lg font-semibold tabular-nums ${memberReport.balance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                    <p className="text-xs text-muted-foreground">Rent Balance</p>
+                    <p className={`text-lg font-semibold tabular-nums ${memberReport.rentBalance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                      {formatTaka(memberReport.rentBalance)}
+                    </p>
+                  </div>
+                  <div className="col-span-2 rounded-lg bg-muted p-3">
+                    <p className="text-xs text-muted-foreground text-center">Net Balance</p>
+                    <p className={`text-2xl font-bold tabular-nums text-center ${memberReport.balance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
                       {formatTaka(memberReport.balance)}
                     </p>
                   </div>

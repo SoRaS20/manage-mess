@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LedgerRouteImport } from './routes/ledger'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MembersRouteImport } from './routes/members'
 import { Route as MonthsRouteImport } from './routes/months'
@@ -20,6 +21,11 @@ import { Route as MonthsMonthIdRouteImport } from './routes/months.$monthId'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LedgerRoute = LedgerRouteImport.update({
+  id: '/ledger',
+  path: '/ledger',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -55,6 +61,7 @@ const MonthsMonthIdRoute = MonthsMonthIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ledger': typeof LedgerRoute
   '/login': typeof LoginRoute
   '/members': typeof MembersRoute
   '/months': typeof MonthsRouteWithChildren
@@ -64,6 +71,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ledger': typeof LedgerRoute
   '/login': typeof LoginRoute
   '/members': typeof MembersRoute
   '/reports': typeof ReportsRoute
@@ -73,6 +81,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/ledger': typeof LedgerRoute
   '/login': typeof LoginRoute
   '/members': typeof MembersRoute
   '/months': typeof MonthsRouteWithChildren
@@ -84,6 +93,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/ledger'
     | '/login'
     | '/members'
     | '/months'
@@ -91,10 +101,18 @@ export interface FileRouteTypes {
     | '/months/$monthId'
     | '/months/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/members' | '/reports' | '/months/$monthId' | '/months'
+  to:
+    | '/'
+    | '/ledger'
+    | '/login'
+    | '/members'
+    | '/reports'
+    | '/months/$monthId'
+    | '/months'
   id:
     | '__root__'
     | '/'
+    | '/ledger'
     | '/login'
     | '/members'
     | '/months'
@@ -105,6 +123,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LedgerRoute: typeof LedgerRoute
   LoginRoute: typeof LoginRoute
   MembersRoute: typeof MembersRoute
   MonthsRoute: typeof MonthsRouteWithChildren
@@ -118,6 +137,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ledger': {
+      id: '/ledger'
+      path: '/ledger'
+      fullPath: '/ledger'
+      preLoaderRoute: typeof LedgerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -180,6 +206,7 @@ const MonthsRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LedgerRoute: LedgerRoute,
   LoginRoute: LoginRoute,
   MembersRoute: MembersRoute,
   MonthsRoute: MonthsRouteWithChildren,

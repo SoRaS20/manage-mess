@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
-import { useMembers, useMeals, useToggleMeal, useUpdateMeal, useDeleteMeal } from '@/api/hooks'
+import { useMembers, useMeals, useToggleMeal, useUpdateMeal, useDeleteMeal, useCreateMeal } from '@/api/hooks'
 import type { Meal, MealSlot } from '@/api/types'
 import { FormDialog } from '@/components/form-dialog'
 import { Badge } from '@/components/ui/badge'
@@ -24,6 +24,7 @@ export function MealsGrid({
   year,
   monthNo,
   closed,
+  managerId,
 }: {
   monthId: number
   year: number
@@ -33,14 +34,21 @@ export function MealsGrid({
 }) {
   const user = useAuthStore((s) => s.user)
   const isAdmin = user?.role === 'ADMIN'
+  const isManager = !isAdmin && user?.memberId !== null && user?.memberId !== undefined && user?.memberId === managerId
+  const isManagerOrAdmin = isAdmin || isManager
 
   const { data: meals, isLoading } = useMeals(monthId)
   const { data: members } = useMembers()
-  const toggle = useToggleMeal(monthId)
+  const createMeal = useCreateMeal(monthId)
   const updateMeal = useUpdateMeal(monthId)
   const deleteMeal = useDeleteMeal(monthId)
 
-  const [editingMeal, setEditingMeal] = useState<Meal | null>(null)
+  const [editingMealInfo, setEditingMealInfo] = useState<{
+    memberId: number
+    memberName: string
+    dateStr: string
+    meal: Meal | null
+  } | null>(null)
 
   const daysInMonth = new Date(year, monthNo, 0).getDate()
   const days = useMemo(
@@ -63,7 +71,7 @@ export function MealsGrid({
     const ids = new Set(list.map((m) => m.id))
     for (const meal of meals ?? []) {
       if (!ids.has(meal.memberId)) {
-        list.push({ id: meal.memberId, name: meal.memberName, joinDate: '', active: false })
+        list.push({ id: meal.memberId, name: meal.memberName, joinDate: '', active: false, banned: false })
         ids.add(meal.memberId)
       }
     }
@@ -76,7 +84,7 @@ export function MealsGrid({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <p>Click a chip to toggle a meal slot (B 0.5 · L 1 · D 1).</p>
+          <p>Click a cell to set meals (B 0.5 · L 1 · D 1).</p>
         </div>
       </div>
 
@@ -130,47 +138,36 @@ export function MealsGrid({
                     </td>
                     {memberCols.map((member) => {
                       const meal = byKey.get(`${member.id}:${dateKey(year, monthNo, d)}`)
+                      const canEdit = !closed && (isManagerOrAdmin || member.id === user?.memberId)
                       return (
-                        <td key={member.id} className="border-b border-r p-0.5">
-                          {meal ? (
-                            <div
-                              className={cn(
-                                'flex items-center justify-center gap-0.5 rounded',
-                                !closed && isAdmin && 'cursor-pointer hover:bg-accent/60'
-                              )}
-                              onClick={() => {
-                                if (isAdmin && !closed) setEditingMeal(meal)
-                              }}
-                              title={isAdmin ? "Edit all slots (admin correction)" : undefined}
-                            >
-                              {SLOTS.map((slot) => {
-                                const on = meal[`${slot.key}On`]
-                                return (
-                                  <button
-                                    key={slot.key}
-                                    type="button"
-                                    disabled={closed || (!isAdmin && member.id !== user?.memberId)}
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      toggle.mutate({ mealId: meal.id, slot: slot.key, on: !on })
-                                    }}
-                                    className={cn(
-                                      'size-5 rounded text-[10px] font-semibold transition-colors disabled:pointer-events-none disabled:opacity-40',
-                                      on
-                                        ? 'bg-primary text-primary-foreground shadow-sm'
-                                        : 'bg-muted text-muted-foreground hover:bg-accent'
-                                    )}
-                                  >
-                                    {slot.label}
-                                  </button>
-                                )
-                              })}
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-center gap-0.5">
-                              <span className="text-muted-foreground/40">·</span>
-                            </div>
+                        <td
+                          key={member.id}
+                          className={cn(
+                            'border-b border-r p-0 cursor-pointer transition-colors',
+                            canEdit ? 'hover:bg-accent/60' : 'opacity-70 pointer-events-none'
                           )}
+                          onClick={() => {
+                            if (canEdit) {
+                              setEditingMealInfo({
+                                memberId: member.id,
+                                memberName: member.name,
+                                dateStr: dateKey(year, monthNo, d),
+                                meal: meal || null,
+                              })
+                            }
+                          }}
+                        >
+                          <div className="flex h-8 w-full items-center justify-center gap-1 p-1">
+                            {meal ? (
+                              <>
+                                <span className={cn("size-2 rounded-full", meal.breakfastOn ? "bg-primary" : "bg-muted")} title="Breakfast"></span>
+                                <span className={cn("size-2 rounded-full", meal.lunchOn ? "bg-primary" : "bg-muted")} title="Lunch"></span>
+                                <span className={cn("size-2 rounded-full", meal.dinnerOn ? "bg-primary" : "bg-muted")} title="Dinner"></span>
+                              </>
+                            ) : (
+                              <span className="text-muted-foreground/30 text-[10px] font-medium">+</span>
+                            )}
+                          </div>
                         </td>
                       )
                     })}
@@ -200,21 +197,34 @@ export function MealsGrid({
         </div>
       )}
 
-      {editingMeal ? (
-        <AdminCorrectDialog
-          key={editingMeal.id}
-          meal={editingMeal}
-          open={!!editingMeal}
-          onOpenChange={(v) => !v && setEditingMeal(null)}
-          submitting={updateMeal.isPending}
+      {editingMealInfo ? (
+        <MealEntryDialog
+          key={`${editingMealInfo.memberId}-${editingMealInfo.dateStr}`}
+          info={editingMealInfo}
+          open={!!editingMealInfo}
+          onOpenChange={(v) => !v && setEditingMealInfo(null)}
+          submitting={updateMeal.isPending || createMeal.isPending}
           isDeleting={deleteMeal.isPending}
           onSave={async (flags) => {
-            await updateMeal.mutateAsync({ mealId: editingMeal.id, flags })
-            setEditingMeal(null)
+            if (editingMealInfo.meal) {
+              await updateMeal.mutateAsync({ mealId: editingMealInfo.meal.id, flags })
+            } else {
+              await createMeal.mutateAsync({
+                member: { id: editingMealInfo.memberId },
+                month: { id: monthId },
+                recordDate: editingMealInfo.dateStr,
+                breakfastOn: flags.breakfastOn,
+                lunchOn: flags.lunchOn,
+                dinnerOn: flags.dinnerOn,
+              })
+            }
+            setEditingMealInfo(null)
           }}
           onDelete={async () => {
-            await deleteMeal.mutateAsync(editingMeal.id)
-            setEditingMeal(null)
+            if (editingMealInfo.meal) {
+              await deleteMeal.mutateAsync(editingMealInfo.meal.id)
+            }
+            setEditingMealInfo(null)
           }}
         />
       ) : null}
@@ -222,8 +232,8 @@ export function MealsGrid({
   )
 }
 
-function AdminCorrectDialog({
-  meal,
+function MealEntryDialog({
+  info,
   open,
   onOpenChange,
   submitting,
@@ -231,7 +241,7 @@ function AdminCorrectDialog({
   onSave,
   onDelete,
 }: {
-  meal: Meal
+  info: { memberName: string; dateStr: string; meal: Meal | null }
   open: boolean
   onOpenChange: (v: boolean) => void
   submitting: boolean
@@ -239,29 +249,36 @@ function AdminCorrectDialog({
   onSave: (flags: { breakfastOn: boolean; lunchOn: boolean; dinnerOn: boolean }) => Promise<void>
   onDelete: () => Promise<void>
 }) {
-  const [flags, setFlags] = useState({ breakfastOn: meal.breakfastOn, lunchOn: meal.lunchOn, dinnerOn: meal.dinnerOn })
+  // Default to all ON if creating a new meal
+  const [flags, setFlags] = useState({
+    breakfastOn: info.meal ? info.meal.breakfastOn : true,
+    lunchOn: info.meal ? info.meal.lunchOn : true,
+    dinnerOn: info.meal ? info.meal.dinnerOn : true,
+  })
 
   return (
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={`Admin correction — ${meal.memberName}`}
-      description={`${meal.recordDate} · daily count ${((flags.breakfastOn ? 0.5 : 0) + (flags.lunchOn ? 1 : 0) + (flags.dinnerOn ? 1 : 0)).toFixed(1)}`}
+      title={`Meal entry — ${info.memberName}`}
+      description={`${info.dateStr} · daily count ${((flags.breakfastOn ? 0.5 : 0) + (flags.lunchOn ? 1 : 0) + (flags.dinnerOn ? 1 : 0)).toFixed(1)}`}
       submitLabel="Save"
       submitting={submitting || isDeleting}
       onSubmit={() => onSave(flags)}
       extraFooter={
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-          onClick={onDelete}
-          disabled={submitting || isDeleting}
-          title="Delete meal record"
-        >
-          <Trash2 className="size-4" />
-        </Button>
+        info.meal ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={onDelete}
+            disabled={submitting || isDeleting}
+            title="Delete meal record"
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        ) : null
       }
     >
       <div className="grid grid-cols-3 gap-3">
@@ -278,14 +295,23 @@ function AdminCorrectDialog({
                 }))
               }
               className={cn(
-                'flex h-14 flex-col items-center justify-center gap-1 rounded-lg border text-sm font-semibold transition-colors',
-                on ? 'border-primary bg-primary text-primary-foreground' : 'border-input text-muted-foreground hover:bg-muted'
+                'flex h-16 flex-col items-center justify-center gap-1.5 rounded-lg border text-sm font-semibold transition-colors',
+                on ? 'border-primary bg-primary text-primary-foreground shadow-sm' : 'border-input text-muted-foreground hover:bg-muted'
               )}
             >
               <span className="uppercase">{slot.key}</span>
-              <Badge variant={on ? 'outline' : 'secondary'} className="text-[10px]">
-                {on ? 'ON' : 'OFF'}
-              </Badge>
+              <div
+                className={cn(
+                  'flex size-5 items-center justify-center rounded-full border',
+                  on ? 'border-primary-foreground/50 bg-primary-foreground text-primary' : 'border-muted-foreground/30 bg-background/50'
+                )}
+              >
+                {on && (
+                  <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
             </button>
           )
         })}

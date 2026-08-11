@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { Pencil, Plus, Trash2, Ban, Undo2 } from 'lucide-react'
+import { Pencil, Plus, Ban, Undo2 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   useCreateMember,
-  useDeleteMember,
   useMembers,
   useToggleMemberActive,
   useUpdateMember,
@@ -131,7 +130,6 @@ function MembersPage() {
   const create = useCreateMember()
   const update = useUpdateMember()
   const toggleActive = useToggleMemberActive()
-  const remove = useDeleteMember()
 
   const user = useAuthStore((s) => s.user)
   const isAdmin = user?.role === 'ADMIN'

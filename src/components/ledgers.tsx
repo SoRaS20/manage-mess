@@ -23,7 +23,7 @@ import {
   useUpdateExpense,
   useUpdateRent,
 } from '@/api/hooks'
-import type { Bazar, Deposit, Expense, ExpenseCategory, Rent } from '@/api/types'
+import type { Bazar, Deposit, Expense, ExpenseCategory, Member, Rent } from '@/api/types'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Field, FormDialog } from '@/components/form-dialog'
 import { Button } from '@/components/ui/button'
@@ -176,7 +176,6 @@ export function BazarLedger({ monthId, closed, managerId }: { monthId: number; c
   const isManagerOrAdmin = user?.role === 'ADMIN' || (user?.memberId !== null && user?.memberId === managerId)
   const { data, isLoading } = useBazar(monthId)
   const create = useCreateBazar(monthId)
-  const createDeposit = useCreateDeposit(monthId)
   const update = useUpdateBazar(monthId)
   const remove = useDeleteBazar(monthId)
   const [dialog, setDialog] = useState<{ open: boolean; edit: Bazar | null }>({ open: false, edit: null })
@@ -230,7 +229,7 @@ export function BazarLedger({ monthId, closed, managerId }: { monthId: number; c
         monthId={monthId}
         open={dialog.open}
         edit={dialog.edit}
-        submitting={create.isPending || update.isPending || createDeposit.isPending}
+        submitting={create.isPending || update.isPending}
         onOpenChange={(v) => setDialog((d) => ({ ...d, open: v }))}
         onSubmit={async (values, existing) => {
           const payload = {
@@ -244,15 +243,6 @@ export function BazarLedger({ monthId, closed, managerId }: { monthId: number; c
             await update.mutateAsync({ id: existing.id, data: payload })
           } else {
             await create.mutateAsync(payload)
-            // A bazar entry is money the member spent on behalf of the mess,
-            // so it also counts as a deposit from that member.
-            await createDeposit.mutateAsync({
-              member: { id: Number(values.memberId) },
-              month: { id: monthId },
-              amount: Number(values.amount),
-              depositDate: values.bazarDate,
-              description: values.description ? `Bazar: ${values.description}` : 'Bazar',
-            })
           }
           setDialog({ open: false, edit: null })
         }}
@@ -340,7 +330,6 @@ export function ExpensesLedger({ monthId, closed, managerId }: { monthId: number
   const isManagerOrAdmin = user?.role === 'ADMIN' || (user?.memberId !== null && user?.memberId === managerId)
   const { data, isLoading } = useExpenses(monthId)
   const create = useCreateExpense(monthId)
-  const createDeposit = useCreateDeposit(monthId)
   const update = useUpdateExpense(monthId)
   const remove = useDeleteExpense(monthId)
   const [dialog, setDialog] = useState<{ open: boolean; edit: Expense | null }>({ open: false, edit: null })
@@ -394,7 +383,7 @@ export function ExpensesLedger({ monthId, closed, managerId }: { monthId: number
         monthId={monthId}
         open={dialog.open}
         edit={dialog.edit}
-        submitting={create.isPending || update.isPending || createDeposit.isPending}
+        submitting={create.isPending || update.isPending}
         onOpenChange={(v) => setDialog((d) => ({ ...d, open: v }))}
         onSubmit={async (values, existing) => {
           const paidById = values.paidById && values.paidById !== 'none' ? Number(values.paidById) : undefined
@@ -410,17 +399,6 @@ export function ExpensesLedger({ monthId, closed, managerId }: { monthId: number
             await update.mutateAsync({ id: existing.id, data: payload })
           } else {
             await create.mutateAsync(payload)
-            // The member who paid the expense fronted the money, so it also
-            // counts as a deposit from them. Only when a payer is set.
-            if (paidById) {
-              await createDeposit.mutateAsync({
-                member: { id: paidById },
-                month: { id: monthId },
-                amount: Number(values.amount),
-                depositDate: values.expenseDate,
-                description: values.description ? `Expense: ${values.description}` : `Expense: ${values.category}`,
-              })
-            }
           }
           setDialog({ open: false, edit: null })
         }}
@@ -545,9 +523,9 @@ export function DepositsLedger({ monthId, closed }: { monthId: number; closed: b
 
   return (
     <LedgerShell
-      title="Deposits"
-      description="Money members paid in for the month."
-      addLabel="Add deposit"
+      title="Rent Deposits"
+      description="Rent deposits paid by members for the month."
+      addLabel="Add rent deposit"
       onAdd={() => setDialog({ open: true, edit: null })}
       disabled={closed || !isAdmin}
       count={data?.length}
@@ -606,7 +584,7 @@ export function DepositsLedger({ monthId, closed }: { monthId: number; closed: b
       <ConfirmDialog
         open={deleteTarget !== null}
         onOpenChange={(v) => !v && setDeleteTarget(null)}
-        title="Delete deposit"
+        title="Delete rent deposit"
         description={deleteTarget ? `${formatTaka(deleteTarget.amount)} on ${formatDate(deleteTarget.depositDate)} will be removed.` : undefined}
         submitting={remove.isPending}
         onConfirm={async () => {
@@ -648,7 +626,7 @@ function DepositDialog({
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={edit ? 'Update deposit' : 'Add deposit'}
+      title={edit ? 'Update rent deposit' : 'Add rent deposit'}
       submitting={submitting}
       onSubmit={form.handleSubmit(async (v) => onSubmit(v, edit))}
     >
@@ -736,6 +714,7 @@ export function RentsLedger({ monthId, closed }: { monthId: number; closed: bool
         monthId={monthId}
         open={dialog.open}
         edit={dialog.edit}
+        availableMembers={dialog.edit ? members ?? [] : missingMembers}
         submitting={create.isPending || update.isPending}
         onOpenChange={(v) => setDialog((d) => ({ ...d, open: v }))}
         onSubmit={async (values, existing) => {
@@ -766,6 +745,7 @@ function RentDialog({
   monthId: _monthId,
   open,
   edit,
+  availableMembers,
   submitting,
   onOpenChange,
   onSubmit,
@@ -773,6 +753,7 @@ function RentDialog({
   monthId: number
   open: boolean
   edit: Rent | null
+  availableMembers?: Member[]
   submitting: boolean
   onOpenChange: (v: boolean) => void
   onSubmit: (values: RentForm, existing: Rent | null) => Promise<void>
@@ -781,6 +762,7 @@ function RentDialog({
     resolver: zodResolver(rentSchema),
     values: edit ? { memberId: String(edit.memberId), amount: String(edit.amount) } : { memberId: '', amount: '' },
   })
+  const memberOptions = (availableMembers ?? []).map((m) => ({ value: String(m.id), label: m.name }))
   return (
     <FormDialog
       open={open}
@@ -790,7 +772,18 @@ function RentDialog({
       onSubmit={form.handleSubmit(async (v) => onSubmit(v, edit))}
     >
       <Field label="Member" error={form.formState.errors.memberId?.message}>
-        <MemberSelectField value={form.watch('memberId')} onChange={(id) => form.setValue('memberId', id, { shouldValidate: true })} />
+        <Select items={memberOptions} value={form.watch('memberId')} onValueChange={(v) => v !== null && form.setValue('memberId', v, { shouldValidate: true })}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select member" />
+          </SelectTrigger>
+          <SelectContent>
+            {memberOptions.map((m) => (
+              <SelectItem key={m.value} value={m.value}>
+                {m.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </Field>
       <Field label="Rent (BDT)" error={form.formState.errors.amount?.message}>
         <Input type="number" step="0.01" min={0} {...form.register('amount')} />

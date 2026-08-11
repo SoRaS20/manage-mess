@@ -39,6 +39,7 @@ export type Bazar = {
   amount: number
   description?: string
   bazarDate: string
+  createdAt?: string
 }
 
 export type ExpenseCategory = 'gas' | 'electricity' | 'water' | 'internet' | 'other'
@@ -52,6 +53,7 @@ export type Expense = {
   expenseDate: string
   paidById?: number | null
   paidByName?: string | null
+  createdAt?: string
 }
 
 export type Deposit = {
@@ -62,6 +64,7 @@ export type Deposit = {
   amount: number
   depositDate: string
   description?: string
+  createdAt?: string
 }
 
 export type Rent = {
@@ -70,6 +73,21 @@ export type Rent = {
   memberName: string
   monthId: number
   amount: number
+  createdAt?: string
+}
+
+export type LedgerEntryType = 'bazar' | 'expense' | 'deposit' | 'rent'
+
+export type LedgerEntry = {
+  type: LedgerEntryType
+  id: number
+  memberId?: number | null
+  memberName?: string | null
+  amount: number
+  description?: string | null
+  category?: string
+  entryDate?: string | null
+  createdAt?: string | null
 }
 
 export type DashboardSummary = {
@@ -104,8 +122,12 @@ export type MonthlyReport = {
     mealRate: number
     mealCost: number
     expenseShare: number
+    bazarContribution: number
+    expenseContribution: number
     rent: number
     deposit: number
+    foodBalance: number
+    rentBalance: number
     balance: number
   }>
   totals: {
@@ -113,6 +135,10 @@ export type MonthlyReport = {
     mealCost: number
     expenses: number
     rent: number
+    bazarContributions: number
+    expenseContributions: number
+    foodBalances: number
+    rentBalances: number
     netBalance: number
   }
 }
@@ -147,7 +173,11 @@ export type MemberReport = {
   mealRate: number
   mealCost: number
   expenseShare: number
+  bazarContribution: number
+  expenseContribution: number
   totalDeposit: number
+  foodBalance: number
+  rentBalance: number
   balance: number
 }
 
@@ -177,6 +207,15 @@ export type MealFlagsPayload = {
   breakfastOn?: boolean
   lunchOn?: boolean
   dinnerOn?: boolean
+}
+
+export type MealPayload = {
+  member: { id: number }
+  month: { id: number }
+  recordDate: string
+  breakfastOn: boolean
+  lunchOn: boolean
+  dinnerOn: boolean
 }
 
 export type BazarPayload = {

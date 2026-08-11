@@ -8,6 +8,7 @@ import type {
   DepositPayload,
   Expense,
   ExpensePayload,
+  LedgerEntry,
   Meal,
   MealFlagsPayload,
   MealTogglePayload,
@@ -46,6 +47,7 @@ export const mealsApi = {
   byMonth: (monthId: number) => api.get<Meal[]>(`/meals/byMonth/${monthId}`),
   byDate: (monthId: number, date: string) => api.get<Meal[]>(`/meals/byDate/${monthId}/${date}`),
   get: (id: number) => api.get<Meal>(`/meals/${id}`),
+  create: (data: import('./types').MealPayload) => api.post<Meal>('/meals', data),
   toggle: (id: number, data: MealTogglePayload) => api.put<Meal>(`/meals/${id}/toggle`, data),
   update: (id: number, data: MealFlagsPayload) => api.put<Meal>(`/meals/${id}`, data),
   remove: (id: number) => api.del(`/meals/${id}`),
@@ -82,6 +84,10 @@ export const rentsApi = {
 
 export const dashboardApi = {
   summary: (monthId: number) => api.get<DashboardSummary>(`/dashboard/${monthId}`),
+}
+
+export const ledgerApi = {
+  byMonth: (monthId: number) => api.get<LedgerEntry[]>(`/ledger/${monthId}`),
 }
 
 export const reportsApi = {

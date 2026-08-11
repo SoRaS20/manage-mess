@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, Outlet, createRootRoute, redirect, useLocation, useRouter } from '@tanstack/react-router'
-import { LayoutDashboard, Receipt, Users, CalendarRange, LogOut, Menu, X } from 'lucide-react'
+import { LayoutDashboard, Receipt, Users, CalendarRange, LogOut, Menu, X, History } from 'lucide-react'
 import { Toaster } from '@/components/ui/sonner'
 import { useAuthStore } from '@/store/auth'
 import { cn } from '@/lib/utils'
@@ -9,6 +9,7 @@ const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/months', label: 'Months', icon: CalendarRange },
   { to: '/members', label: 'Members', icon: Users },
+  { to: '/ledger', label: 'Money log', icon: History },
   { to: '/reports', label: 'Reports', icon: Receipt },
 ]
 
