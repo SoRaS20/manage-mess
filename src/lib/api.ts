@@ -15,7 +15,7 @@ export class ApiError extends Error {
 type RequestOptions = RequestInit & { params?: Record<string, string | number | undefined> }
 
 async function request<T>(path: string, init: RequestOptions = {}): Promise<T> {
-  const { params, headers, ...rest } = init
+  const { params, headers, signal, ...rest } = init
   let url = `${API_BASE}${path}`
   if (params) {
     const qs = new URLSearchParams()
@@ -32,10 +32,24 @@ async function request<T>(path: string, init: RequestOptions = {}): Promise<T> {
     authHeaders['Authorization'] = `Bearer ${state.token}`
   }
 
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...authHeaders, ...headers },
-    ...rest,
-  })
+  const controller = new AbortController()
+  const timeoutId = window.setTimeout(() => controller.abort(), 60000)
+  let res: Response
+
+  try {
+    res = await fetch(url, {
+      headers: { 'Content-Type': 'application/json', ...authHeaders, ...headers },
+      signal: signal ?? controller.signal,
+      ...rest,
+    })
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new ApiError(0, 'Request timed out. The server or database may still be waking up.')
+    }
+    throw new ApiError(0, 'Network error. Check the backend URL, CORS settings, or whether the server is awake.')
+  } finally {
+    window.clearTimeout(timeoutId)
+  }
 
   if (!res.ok) {
     let message = `Request failed with status ${res.status}`
