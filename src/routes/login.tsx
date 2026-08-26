@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useAuthStore } from '@/store/auth'
-import { api } from '@/lib/api'
+import { loginServerFn } from '@/server/auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -41,7 +41,7 @@ function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      const res = await api.post<{ token: string; user: any }>('/login', values)
+      const res = await loginServerFn({ data: values })
       setAuth(res.token, res.user)
       navigate({ to: '/' })
     } catch (err: any) {
@@ -61,7 +61,7 @@ function LoginPage() {
         <CardContent>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {error && <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">{error}</div>}
-            
+
             <Field label="Username" error={form.formState.errors.username?.message}>
               <Input {...form.register('username')} placeholder="admin" disabled={loading} />
             </Field>

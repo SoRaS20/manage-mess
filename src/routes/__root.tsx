@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, Outlet, createRootRoute, redirect, useLocation, useRouter } from '@tanstack/react-router'
+import { Link, Outlet, createRootRoute, redirect, useLocation, useRouter, HeadContent, Scripts } from '@tanstack/react-router'
 import { LayoutDashboard, Receipt, Users, CalendarRange, LogOut, Menu, X, History } from 'lucide-react'
 import { Toaster } from '@/components/ui/sonner'
 import { useAuthStore } from '@/store/auth'
@@ -14,6 +14,16 @@ const navItems = [
 ]
 
 export const Route = createRootRoute({
+  head: () => ({
+    meta: [
+      { charSet: 'utf-8' },
+      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+      { title: 'Mess Manager' },
+    ],
+    links: [
+      { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+  }),
   beforeLoad: ({ location }) => {
     const { token } = useAuthStore.getState()
     if (!token && location.pathname !== '/login') {
@@ -24,19 +34,43 @@ export const Route = createRootRoute({
 })
 
 function RootComponent() {
+  return (
+    <RootDocument>
+      <Outlet />
+    </RootDocument>
+  )
+}
+
+function RootDocument({ children }: { children: React.ReactNode }) {
   const location = useLocation()
 
-  // The login page is standalone — no sidebar or app chrome.
   if (location.pathname === '/login') {
     return (
-      <>
-        <Outlet />
-        <Toaster position="top-right" richColors />
-      </>
+      <html lang="en">
+        <head>
+          <HeadContent />
+        </head>
+        <body>
+          {children}
+          <Toaster position="top-right" richColors />
+          <Scripts />
+        </body>
+      </html>
     )
   }
 
-  return <AppShell />
+  return (
+    <html lang="en">
+      <head>
+        <HeadContent />
+      </head>
+      <body>
+        <AppShell>{children}</AppShell>
+        <Toaster position="top-right" richColors />
+        <Scripts />
+      </body>
+    </html>
+  )
 }
 
 function Brand({ small = false }: { small?: boolean }) {
@@ -75,7 +109,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   )
 }
 
-function AppShell() {
+function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const closeMobileNav = () => setMobileNavOpen(false)
 
@@ -130,11 +164,9 @@ function AppShell() {
 
       <main className="min-w-0 flex-1 md:ml-56">
         <div className="mx-auto w-full min-w-0 max-w-6xl px-4 pt-16 pb-10 md:px-8 md:py-8">
-          <Outlet />
+          {children}
         </div>
       </main>
-
-      <Toaster position="top-right" richColors />
     </div>
   )
 }
