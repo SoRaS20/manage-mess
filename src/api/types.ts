@@ -1,7 +1,7 @@
 export type Member = {
   id: number
   name: string
-  phone?: string
+  phone?: string | null
   joinDate: string
   active: boolean
   banned: boolean
