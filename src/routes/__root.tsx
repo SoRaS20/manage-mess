@@ -1,9 +1,13 @@
 import { useState } from 'react'
 import { Link, Outlet, createRootRoute, redirect, useLocation, useRouter, HeadContent, Scripts } from '@tanstack/react-router'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { LayoutDashboard, Receipt, Users, CalendarRange, LogOut, Menu, X, History } from 'lucide-react'
 import { Toaster } from '@/components/ui/sonner'
 import { useAuthStore } from '@/store/auth'
+import { ThemeProvider } from '@/providers/theme-provider'
+import { queryClient } from '@/lib/query'
 import { cn } from '@/lib/utils'
+import appCss from '@/index.css?url'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -21,13 +25,20 @@ export const Route = createRootRoute({
       { title: 'Mess Manager' },
     ],
     links: [
+      { rel: 'stylesheet', href: appCss },
       { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
     ],
   }),
   beforeLoad: ({ location }) => {
     const { token } = useAuthStore.getState()
     if (!token && location.pathname !== '/login') {
-      throw redirect({ to: '/login' })
+      const redirectUrl = location.pathname !== '/login' ? location.pathname : '/'
+      throw redirect({
+        to: '/login',
+        search: {
+          redirect: redirectUrl,
+        },
+      })
     }
   },
   component: RootComponent,
@@ -35,9 +46,14 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   return (
-    <RootDocument>
-      <Outlet />
-    </RootDocument>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+        <RootDocument>
+          <Outlet />
+        </RootDocument>
+        <Toaster richColors position="bottom-center" />
+      </ThemeProvider>
+    </QueryClientProvider>
   )
 }
 
@@ -46,13 +62,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
   if (location.pathname === '/login') {
     return (
-      <html lang="en">
+      <html lang="en" className="dark" suppressHydrationWarning>
         <head>
           <HeadContent />
         </head>
-        <body>
+        <body className="bg-background text-foreground antialiased overscroll-none">
           {children}
-          <Toaster position="top-right" richColors />
           <Scripts />
         </body>
       </html>
@@ -60,13 +75,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <html lang="en">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body className="bg-background text-foreground antialiased overscroll-none">
         <AppShell>{children}</AppShell>
-        <Toaster position="top-right" richColors />
         <Scripts />
       </body>
     </html>
@@ -115,7 +129,6 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-svh">
-      {/* desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-56 flex-col border-r bg-sidebar text-sidebar-foreground md:flex">
         <div className="flex h-14 items-center gap-2 border-b px-5">
           <Brand />
@@ -128,7 +141,6 @@ function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* mobile top bar */}
       <header className="fixed inset-x-0 top-0 z-40 flex h-12 items-center justify-between border-b bg-background px-4 md:hidden">
         <Link to="/" className="flex items-center gap-2" onClick={closeMobileNav}>
           <Brand small />
@@ -144,15 +156,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
         </button>
       </header>
 
-      {/* mobile slide-down menu */}
       {mobileNavOpen && (
         <div className="fixed inset-0 top-12 z-30 md:hidden">
-          <button
-            type="button"
-            aria-label="Close navigation"
-            className="absolute inset-0 bg-black/40"
-            onClick={closeMobileNav}
-          />
+          <button type="button" aria-label="Close navigation" className="absolute inset-0 bg-black/40" onClick={closeMobileNav} />
           <nav className="absolute inset-x-0 top-0 space-y-1 border-b bg-sidebar p-3 text-sidebar-foreground shadow-lg">
             <NavLinks onNavigate={closeMobileNav} />
             <div className="mt-2 border-t pt-3">

@@ -4,7 +4,6 @@ import { db } from '../db'
 import { months, members, meals, bazar, expenses, deposits, rents } from '../db/schema'
 import { round2, dailyCount } from './utils'
 
-// ── helpers ────────────────────────────────────────────
 async function mealCountFor(memberId: number, monthId: number): Promise<number> {
   const rows = await db.query.meals.findMany({
     where: and(eq(meals.memberId, memberId), eq(meals.monthId, monthId)),
@@ -108,8 +107,8 @@ async function buildSummary(monthId: number): Promise<Summary | null> {
 }
 
 async function buildBalance(memberId: number, memberName: string, monthId: number, summary: Summary) {
-  const meals = await mealCountFor(memberId, monthId)
-  const mealCost = round2(meals * summary.mealRate)
+  const mealsCount = await mealCountFor(memberId, monthId)
+  const mealCost = round2(mealsCount * summary.mealRate)
   const expenseShare = summary.expenseSharePerMember
   const bazarContribution = await bazarFor(memberId, monthId)
   const expenseContribution = await expensePaidByFor(memberId, monthId)
@@ -119,15 +118,10 @@ async function buildBalance(memberId: number, memberName: string, monthId: numbe
   let foodBalance = round2(bazarContribution + expenseContribution - mealCost - expenseShare)
   const rentBalance = round2(deposit - rent)
 
-  const isInactiveOrBanned = false // checked by caller
-  if (isInactiveOrBanned && meals === 0) {
-    // Handled at call site
-  }
-
   return {
     memberId,
     memberName,
-    meals,
+    meals: mealsCount,
     mealRate: summary.mealRate,
     mealCost,
     expenseShare,
@@ -141,7 +135,6 @@ async function buildBalance(memberId: number, memberName: string, monthId: numbe
   }
 }
 
-// ── Monthly Report ─────────────────────────────────────
 export const getMonthlyReport = createServerFn({ method: 'GET' as const })
   .validator((data: { monthId: number }) => data)
   .handler(async ({ data }) => {
@@ -155,21 +148,21 @@ export const getMonthlyReport = createServerFn({ method: 'GET' as const })
     const memberBalances = []
 
     for (const m of allMembers) {
-      const meals = await mealCountFor(m.id, data.monthId)
+      const mealsCount = await mealCountFor(m.id, data.monthId)
       const rent = await rentFor(m.id, data.monthId)
       const deposit = await depositFor(m.id, data.monthId)
       const bazarContribution = await bazarFor(m.id, data.monthId)
       const expenseContribution = await expensePaidByFor(m.id, data.monthId)
 
-      const hasParticipation = meals > 0 || rent > 0 || deposit > 0 || bazarContribution > 0 || expenseContribution > 0
+      const hasParticipation = mealsCount > 0 || rent > 0 || deposit > 0 || bazarContribution > 0 || expenseContribution > 0
       const isIncluded = (m.active && !m.banned) || hasParticipation
       if (!isIncluded) continue
 
-      const mealCost = round2(meals * summary.mealRate)
+      const mealCost = round2(mealsCount * summary.mealRate)
       let expenseShare = summary.expenseSharePerMember
       let foodBalance = round2(bazarContribution + expenseContribution - mealCost - expenseShare)
 
-      if ((m.banned || !m.active) && meals === 0) {
+      if ((m.banned || !m.active) && mealsCount === 0) {
         expenseShare = 0
         foodBalance = round2(bazarContribution + expenseContribution - mealCost - 0)
       }
@@ -179,7 +172,7 @@ export const getMonthlyReport = createServerFn({ method: 'GET' as const })
       memberBalances.push({
         memberId: m.id,
         memberName: m.name,
-        meals,
+        meals: mealsCount,
         mealRate: summary.mealRate,
         mealCost,
         expenseShare,
@@ -223,7 +216,6 @@ export const getMonthlyReport = createServerFn({ method: 'GET' as const })
     }
   })
 
-// ── Daily Report ───────────────────────────────────────
 export const getDailyReport = createServerFn({ method: 'GET' as const })
   .validator((data: { monthId: number; date: string }) => data)
   .handler(async ({ data }) => {
@@ -265,7 +257,6 @@ export const getDailyReport = createServerFn({ method: 'GET' as const })
     }
   })
 
-// ── Member Report ──────────────────────────────────────
 export const getMemberReport = createServerFn({ method: 'GET' as const })
   .validator((data: { memberId: number; monthId: number }) => data)
   .handler(async ({ data }) => {
@@ -287,7 +278,8 @@ export const getMemberReport = createServerFn({ method: 'GET' as const })
     })
     const depositList = memberDeposits.map((r) => ({ date: r.depositDate, amount: Number(r.amount) }))
 
-    const balance = await buildBalance(member.name, member.name, data.monthId, (await buildSummary(data.monthId))!)
+    const summary = await buildSummary(data.monthId)
+    const balance = await buildBalance(member.name, member.name, data.monthId, summary!)
 
     return {
       member: { id: member.id, name: member.name },

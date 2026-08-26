@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useLocation, useNavigate } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { Clock } from 'lucide-react'
 import { z } from 'zod'
@@ -24,7 +24,8 @@ export const Route = createFileRoute('/ledger')({
 })
 
 function LedgerPage() {
-  const { monthId } = Route.useSearch()
+  const location = useLocation()
+  const monthId = (location.search as { monthId?: number })?.monthId
   const navigate = useNavigate()
   const { data: months, isLoading } = useMonths()
 

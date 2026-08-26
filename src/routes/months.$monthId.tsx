@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useLocation, useNavigate } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { CalendarDays, Lock, LockOpen } from 'lucide-react'
 import { z } from 'zod'
@@ -34,7 +34,8 @@ export const Route = createFileRoute('/months/$monthId')({
 function MonthDetailPage() {
   const { monthId } = Route.useParams()
   const id = Number(monthId)
-  const { tab } = Route.useSearch()
+  const location = useLocation()
+  const tab = (location.search as { tab?: string })?.tab
   const navigate = useNavigate()
 
   const { data: month, isLoading } = useMonth(id)

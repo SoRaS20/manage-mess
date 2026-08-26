@@ -1,17 +1,24 @@
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, redirect, useLocation, useNavigate } from '@tanstack/react-router'
+import { zodValidator } from '@tanstack/zod-adapter'
 import { useState } from 'react'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
+import { ShieldUser, Loader2 } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import { loginServerFn } from '@/server/auth'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Field } from '@/components/form-dialog'
-import { Loader2 } from 'lucide-react'
+import { Separator } from '@/components/ui/separator'
+
+const loginSearchSchema = z.object({
+  redirect: z.string().catch('/'),
+})
 
 export const Route = createFileRoute('/login')({
+  validateSearch: zodValidator(loginSearchSchema),
   beforeLoad: () => {
     const { token } = useAuthStore.getState()
     if (token) {
@@ -28,6 +35,8 @@ const loginSchema = z.object({
 
 function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const searchRedirect = (location.search as { redirect?: string })?.redirect
   const setAuth = useAuthStore((s) => s.setAuth)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -43,7 +52,8 @@ function LoginPage() {
     try {
       const res = await loginServerFn({ data: values })
       setAuth(res.token, res.user)
-      navigate({ to: '/' })
+      const targetPath = !searchRedirect || searchRedirect === '/login' ? '/' : searchRedirect
+      navigate({ to: targetPath as any })
     } catch (err: any) {
       setError(err.message || 'Login failed')
     } finally {
@@ -52,15 +62,22 @@ function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-[80vh] items-center justify-center p-4">
+    <div className="flex h-svh w-full max-w-xl mx-auto items-center justify-center p-6 md:p-10">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
-          <CardDescription>Enter your username and password below.</CardDescription>
+          <CardTitle className="flex items-center justify-center gap-2">
+            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
+              <ShieldUser className="size-4" />
+            </div>
+            Login
+          </CardTitle>
         </CardHeader>
+        <Separator />
         <CardContent>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {error && <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">{error}</div>}
+          <form onSubmit={form.handleSubmit(onSubmit)} className="w-full min-w-xs md:min-w-sm space-y-4">
+            {error && (
+              <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">{error}</div>
+            )}
 
             <Field label="Username" error={form.formState.errors.username?.message}>
               <Input {...form.register('username')} placeholder="admin" disabled={loading} />

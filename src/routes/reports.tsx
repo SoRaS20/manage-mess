@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useLocation, useNavigate } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { z } from 'zod'
 import { useMonths } from '@/api/hooks'
@@ -16,7 +16,8 @@ export const Route = createFileRoute('/reports')({
 })
 
 function ReportsPage() {
-  const { monthId } = Route.useSearch()
+  const location = useLocation()
+  const monthId = (location.search as { monthId?: number })?.monthId
   const navigate = useNavigate()
   const { data: months, isLoading } = useMonths()
 

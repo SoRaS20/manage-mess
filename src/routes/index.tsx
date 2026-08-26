@@ -1,4 +1,4 @@
-import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
+import { Link, createFileRoute, useLocation, useNavigate } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { ArrowRight, Banknote, CalendarDays, Coins, FlaskConical, Receipt, Users, Utensils } from 'lucide-react'
 import { z } from 'zod'
@@ -29,7 +29,8 @@ export const Route = createFileRoute('/')({
 })
 
 function DashboardPage() {
-  const { monthId } = Route.useSearch()
+  const location = useLocation()
+  const monthId = (location.search as { monthId?: number })?.monthId
   const navigate = useNavigate()
 
   const { data: months, isLoading: monthsLoading } = useMonths()
