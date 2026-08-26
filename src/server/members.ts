@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { eq, asc } from 'drizzle-orm'
+import { eq, asc, sql } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
 import { db } from '../db'
 import { members, users } from '../db/schema'
@@ -28,22 +28,37 @@ export const createMember = createServerFn({ method: 'POST' as const })
     let userId: number | undefined
 
     if (data.createAppUser && data.username && data.password) {
-      if (data.username.length < 3) throw new Error('Username must be at least 3 characters')
+      const cleanUsername = data.username.trim()
+      if (cleanUsername.length < 3) throw new Error('Username must be at least 3 characters')
       if (data.password.length < 6) throw new Error('Password must be at least 6 characters')
 
-      const existing = await db.select().from(users).where(eq(users.username, data.username)).limit(1)
-      if (existing.length > 0) throw new Error('Username already taken')
+      const existing = await db
+        .select()
+        .from(users)
+        .where(sql`LOWER(${users.username}) = LOWER(${cleanUsername})`)
+        .limit(1)
+      if (existing.length > 0) throw new Error(`Username "${cleanUsername}" is already taken`)
 
       const hash = await bcrypt.hash(data.password, 10)
-      const [createdUser] = await db.insert(users).values({ username: data.username, password: hash, role: 'MEMBER' }).returning()
-      userId = createdUser.id
+      try {
+        const [createdUser] = await db
+          .insert(users)
+          .values({ username: cleanUsername, password: hash, role: 'MEMBER' })
+          .returning()
+        userId = createdUser.id
+      } catch (err: any) {
+        if (err?.code === '23505' || err?.message?.includes('unique') || err?.message?.includes('duplicate')) {
+          throw new Error(`Username "${cleanUsername}" is already taken`)
+        }
+        throw new Error(err?.message || 'Failed to create user login')
+      }
     }
 
     const [member] = await db
       .insert(members)
       .values({
-        name: data.name,
-        phone: data.phone || null,
+        name: data.name.trim(),
+        phone: data.phone?.trim() || null,
         joinDate: data.joinDate,
         userId: userId ?? null,
       })
@@ -61,10 +76,41 @@ export const updateMember = createServerFn({ method: 'POST' as const })
       joinDate?: string
       active?: boolean
       banned?: boolean
+      createAppUser?: boolean
+      username?: string
+      password?: string
     }) => data,
   )
   .handler(async ({ data }) => {
-    const { id, ...fields } = data
+    const { id, createAppUser, username, password, ...fields } = data
+
+    if (createAppUser && username && password) {
+      const cleanUsername = username.trim()
+      if (cleanUsername.length < 3) throw new Error('Username must be at least 3 characters')
+      if (password.length < 6) throw new Error('Password must be at least 6 characters')
+
+      const existing = await db
+        .select()
+        .from(users)
+        .where(sql`LOWER(${users.username}) = LOWER(${cleanUsername})`)
+        .limit(1)
+      if (existing.length > 0) throw new Error(`Username "${cleanUsername}" is already taken`)
+
+      const hash = await bcrypt.hash(password, 10)
+      try {
+        const [createdUser] = await db
+          .insert(users)
+          .values({ username: cleanUsername, password: hash, role: 'MEMBER' })
+          .returning()
+        ;(fields as any).userId = createdUser.id
+      } catch (err: any) {
+        if (err?.code === '23505' || err?.message?.includes('unique') || err?.message?.includes('duplicate')) {
+          throw new Error(`Username "${cleanUsername}" is already taken`)
+        }
+        throw new Error(err?.message || 'Failed to create user login')
+      }
+    }
+
     const [updated] = await db.update(members).set(fields).where(eq(members.id, id)).returning()
     if (!updated) throw new Error('Member not found')
     return updated

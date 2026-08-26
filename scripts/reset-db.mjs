@@ -20,6 +20,12 @@ async function resetDb() {
     )
     console.log('[reset-db] Tables truncated.')
 
+    console.log('[reset-db] Setting default value on version columns...')
+    const tables = ['app_user', 'member', 'mess_month', 'meal', 'bazar', 'expense', 'deposit', 'rent']
+    for (const table of tables) {
+      await pool.query(`ALTER TABLE "${table}" ALTER COLUMN version SET DEFAULT 1;`)
+    }
+
     console.log(`[reset-db] Creating fresh admin user: "${SEED_ADMIN_USERNAME}"...`)
     const hash = await bcrypt.hash(SEED_ADMIN_PASSWORD, 10)
 

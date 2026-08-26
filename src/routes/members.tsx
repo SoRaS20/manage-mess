@@ -97,7 +97,7 @@ function MemberDialog({
         <Input type="date" {...form.register('joinDate')} />
       </Field>
 
-      {!edit && (
+      {(!edit || !edit.userId) && (
         <div className="flex items-center gap-2 pt-2 pb-2">
           <input
             type="checkbox"
@@ -111,7 +111,7 @@ function MemberDialog({
         </div>
       )}
 
-      {createAppUser && !edit && (
+      {createAppUser && (!edit || !edit.userId) && (
         <div className="space-y-4 rounded-md border p-4 bg-muted/50">
           <Field label="Username" error={form.formState.errors.username?.message}>
             <Input {...form.register('username')} placeholder="e.g. rahman123" />
@@ -119,6 +119,14 @@ function MemberDialog({
           <Field label="Password" error={form.formState.errors.password?.message}>
             <Input type="password" {...form.register('password')} placeholder="••••••••" />
           </Field>
+        </div>
+      )}
+
+      {edit?.userId && edit.user && (
+        <div className="pt-2">
+          <Badge variant="outline" className="text-xs font-normal">
+            App login enabled (@{edit.user.username})
+          </Badge>
         </div>
       )}
     </FormDialog>

@@ -5,7 +5,8 @@ export type Member = {
   joinDate: string
   active: boolean
   banned: boolean
-  userId?: number
+  userId?: number | null
+  user?: { id: number; username: string; role: string } | null
 }
 
 export type Month = {
