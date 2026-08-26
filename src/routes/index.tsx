@@ -7,7 +7,7 @@ import { MonthSelect } from '@/components/month-select'
 import { StatCard } from '@/components/stat-card'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -118,18 +118,84 @@ function DashboardPage() {
         />
       </div>
 
+      {selectedId ? (
+        <Card className="border-primary/20 bg-card">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base font-semibold">Quick Actions</CardTitle>
+                <CardDescription>Direct shortcuts to manage mess activities for this month.</CardDescription>
+              </div>
+              <Link
+                to="/months/$monthId"
+                params={{ monthId: String(selectedId) } as any}
+                className={buttonVariants({ variant: 'default', size: 'sm' })}
+              >
+                Full Month View <ArrowRight />
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+              <Link
+                to="/months/$monthId"
+                params={{ monthId: String(selectedId) } as any}
+                search={{ tab: 'meals' }}
+                className="flex flex-col items-center justify-center rounded-lg border bg-background p-3 text-center transition-all hover:bg-accent hover:border-primary/50"
+              >
+                <Utensils className="size-5 text-primary mb-1.5" />
+                <span className="text-xs font-medium">Meals Grid</span>
+                <span className="text-[10px] text-muted-foreground mt-0.5">Toggle daily meals</span>
+              </Link>
+              <Link
+                to="/months/$monthId"
+                params={{ monthId: String(selectedId) } as any}
+                search={{ tab: 'bazar' }}
+                className="flex flex-col items-center justify-center rounded-lg border bg-background p-3 text-center transition-all hover:bg-accent hover:border-primary/50"
+              >
+                <Banknote className="size-5 text-emerald-500 mb-1.5" />
+                <span className="text-xs font-medium">Bazar</span>
+                <span className="text-[10px] text-muted-foreground mt-0.5">Add grocery cost</span>
+              </Link>
+              <Link
+                to="/months/$monthId"
+                params={{ monthId: String(selectedId) } as any}
+                search={{ tab: 'expenses' }}
+                className="flex flex-col items-center justify-center rounded-lg border bg-background p-3 text-center transition-all hover:bg-accent hover:border-primary/50"
+              >
+                <FlaskConical className="size-5 text-amber-500 mb-1.5" />
+                <span className="text-xs font-medium">Expenses</span>
+                <span className="text-[10px] text-muted-foreground mt-0.5">Gas, electricity, etc.</span>
+              </Link>
+              <Link
+                to="/months/$monthId"
+                params={{ monthId: String(selectedId) } as any}
+                search={{ tab: 'deposits' }}
+                className="flex flex-col items-center justify-center rounded-lg border bg-background p-3 text-center transition-all hover:bg-accent hover:border-primary/50"
+              >
+                <Coins className="size-5 text-blue-500 mb-1.5" />
+                <span className="text-xs font-medium">Deposits</span>
+                <span className="text-[10px] text-muted-foreground mt-0.5">Record payments</span>
+              </Link>
+              <Link
+                to="/months/$monthId"
+                params={{ monthId: String(selectedId) } as any}
+                search={{ tab: 'rents' }}
+                className="col-span-2 sm:col-span-1 flex flex-col items-center justify-center rounded-lg border bg-background p-3 text-center transition-all hover:bg-accent hover:border-primary/50"
+              >
+                <Receipt className="size-5 text-purple-500 mb-1.5" />
+                <span className="text-xs font-medium">Rents</span>
+                <span className="text-[10px] text-muted-foreground mt-0.5">House rent charges</span>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader>
           <CardTitle className="text-base">Member balances</CardTitle>
-          {selectedId ? (
-            <Link
-              to="/months/$monthId"
-              params={{ monthId: String(selectedId) } as any}
-              className={buttonVariants({ variant: 'outline', size: 'sm' })}
-            >
-              Open month <ArrowRight />
-            </Link>
-          ) : null}
+          <CardDescription>Individual summary of meals, costs, expenses, and net balance.</CardDescription>
         </CardHeader>
         <CardContent>
           {reportLoading ? (

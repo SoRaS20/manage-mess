@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { createFileRoute, useLocation, useNavigate } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { CalendarDays, Lock, LockOpen } from 'lucide-react'
@@ -38,6 +39,24 @@ function MonthDetailPage() {
   const tab = (location.search as { tab?: string })?.tab
   const navigate = useNavigate()
 
+  const [activeTab, setActiveTab] = useState(tab ?? 'meals')
+
+  useEffect(() => {
+    if (tab && tab !== activeTab) {
+      setActiveTab(tab)
+    }
+  }, [tab])
+
+  const setTab = (newTab: string) => {
+    setActiveTab(newTab)
+    navigate({
+      to: '/months/$monthId',
+      params: { monthId: String(id) } as any,
+      search: { tab: newTab } as any,
+      replace: true,
+    })
+  }
+
   const { data: month, isLoading } = useMonth(id)
   const { data: report } = useMonthlyReport(id)
   const { data: members } = useMembers()
@@ -48,8 +67,6 @@ function MonthDetailPage() {
 
   const user = useAuthStore((s) => s.user)
   const isAdmin = user?.role === 'ADMIN'
-
-  const setTab = (tab: string) => navigate({ search: { tab } as any })
 
   if (isLoading) {
     return (
@@ -69,7 +86,6 @@ function MonthDetailPage() {
   }
 
   const closed = month.closed
-  const activeTab = tab ?? 'meals'
 
   return (
     <div className="space-y-6">

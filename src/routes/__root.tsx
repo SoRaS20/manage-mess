@@ -30,8 +30,16 @@ export const Route = createRootRoute({
     ],
   }),
   beforeLoad: ({ location }) => {
-    const { token } = useAuthStore.getState()
-    if (!token && location.pathname !== '/login') {
+    let hasToken = false
+
+    if (typeof window !== 'undefined') {
+      const { token } = useAuthStore.getState()
+      hasToken = !!token || document.cookie.includes('mess_auth_token=')
+    } else {
+      hasToken = true
+    }
+
+    if (!hasToken && location.pathname !== '/login') {
       const redirectUrl = location.pathname !== '/login' ? location.pathname : '/'
       throw redirect({
         to: '/login',

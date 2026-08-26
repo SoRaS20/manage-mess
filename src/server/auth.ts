@@ -36,7 +36,7 @@ function base64urlDecode(str: string): string {
 export async function createJwtToken(payload: AuthUser): Promise<string> {
   const header = { alg: 'HS256', typ: 'JWT' }
   const encodedHeader = base64urlEncode(JSON.stringify(header))
-  const exp = Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60
+  const exp = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60 // 30 days
   const encodedPayload = base64urlEncode(JSON.stringify({ ...payload, exp }))
   const dataToSign = `${encodedHeader}.${encodedPayload}`
 

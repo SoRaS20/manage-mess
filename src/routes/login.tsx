@@ -20,9 +20,11 @@ const loginSearchSchema = z.object({
 export const Route = createFileRoute('/login')({
   validateSearch: zodValidator(loginSearchSchema),
   beforeLoad: () => {
-    const { token } = useAuthStore.getState()
-    if (token) {
-      throw redirect({ to: '/' })
+    if (typeof window !== 'undefined') {
+      const { token } = useAuthStore.getState()
+      if (token || document.cookie.includes('mess_auth_token=')) {
+        throw redirect({ to: '/' })
+      }
     }
   },
   component: LoginPage,
