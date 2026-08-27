@@ -170,20 +170,20 @@ export function MealsGrid({
           <p className="mt-1 text-xs text-muted-foreground">Add members first to start tracking meals.</p>
         </div>
       ) : (
-        <div className="overflow-auto rounded-xl border bg-card shadow-sm">
-          <table className="w-full min-w-max border-collapse text-xs">
+        <div className="max-h-[70vh] overflow-auto rounded-xl border bg-card shadow-sm">
+          <table className="w-full min-w-max border-separate border-spacing-0 text-xs">
             <thead>
-              <tr>
-                <th className="sticky left-0 z-30 w-24 min-w-24 border-b border-r bg-muted/95 px-3 py-3 text-left align-bottom font-semibold backdrop-blur">
+              <tr className="sticky top-0 z-30">
+                <th className="sticky left-0 z-30 w-24 min-w-24 border-b border-r bg-muted px-3 py-3 text-left align-bottom font-semibold">
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Calendar</div>
                   <div className="mt-0.5 text-sm text-foreground">Date</div>
                 </th>
-                <th className="sticky left-24 z-30 w-20 min-w-20 border-b border-r bg-muted/95 px-2 py-3 text-center align-bottom font-semibold backdrop-blur">
+                <th className="sticky left-24 z-30 w-20 min-w-20 border-b border-r bg-muted px-2 py-3 text-center align-bottom font-semibold">
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Daily</div>
                   <div className="mt-0.5 text-xs text-foreground">B · L · D</div>
                 </th>
                 {memberCols.map((member) => (
-                  <th key={member.id} className="min-w-24 border-b border-r bg-muted/95 px-2 py-2.5 text-center align-bottom font-medium backdrop-blur">
+                  <th key={member.id} className="min-w-24 border-b border-r bg-muted px-2 py-2.5 text-center align-bottom font-medium">
                     <div className="mx-auto flex max-w-24 items-center justify-center gap-1.5">
                       <span className={cn('size-1.5 shrink-0 rounded-full', member.active ? 'bg-emerald-500' : 'bg-muted-foreground/30')} />
                       <span className="truncate text-xs font-semibold" title={member.name}>{member.name}</span>

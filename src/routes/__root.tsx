@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, Outlet, createRootRoute, redirect, useLocation, useRouter, HeadContent, Scripts } from '@tanstack/react-router'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { LayoutDashboard, Receipt, Users, CalendarRange, LogOut, Menu, X, History, CalendarDays } from 'lucide-react'
+import { LayoutDashboard, Receipt, Users, CalendarRange, LogOut, Menu, X, History, CalendarDays, ClipboardList } from 'lucide-react'
 import { Toaster } from '@/components/ui/sonner'
 import { useAuthStore } from '@/store/auth'
 import { ThemeProvider } from '@/providers/theme-provider'
@@ -13,6 +13,7 @@ import appCss from '@/index.css?url'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/months/$monthId', label: 'Member Entry', icon: ClipboardList, dynamic: true },
   { to: '/months', label: 'Months', icon: CalendarRange },
   { to: '/members', label: 'Members', icon: Users },
   { to: '/ledger', label: 'Money log', icon: History },
@@ -122,31 +123,22 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <>
-      {navItems.map((item) => (
-        <Link
-          key={item.to}
-          to={item.to}
-          onClick={onNavigate}
-          className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          activeProps={{ className: 'bg-sidebar-accent text-sidebar-accent-foreground' }}
-          activeOptions={{ exact: item.end }}
-        >
-          <item.icon className="size-4" />
-          {item.label}
+      {navItems.map((item) => {
+        const href = item.dynamic && currentMonth ? `/months/${currentMonth.id}` : item.to
+        return (
+          <Link
+            key={item.label}
+            to={href}
+            onClick={onNavigate}
+            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            activeProps={{ className: 'bg-sidebar-accent text-sidebar-accent-foreground' }}
+            activeOptions={{ exact: item.end }}
+          >
+            <item.icon className="size-4" />
+            {item.label}
         </Link>
-      ))}
-      {currentMonth && (
-        <Link
-          to="/months/$monthId"
-          params={{ monthId: String(currentMonth.id) }}
-          onClick={onNavigate}
-          className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          activeProps={{ className: 'bg-sidebar-accent text-sidebar-accent-foreground' }}
-        >
-          <CalendarDays className="size-4" />
-          Member Entry
-        </Link>
-      )}
+        )
+      })}
     </>
   )
 }
