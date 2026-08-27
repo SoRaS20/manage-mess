@@ -1,12 +1,12 @@
 export type Member = {
   id: number
   name: string
-  phone?: string | null
+  phone: string | null
   joinDate: string
   active: boolean
   banned: boolean
-  userId?: number | null
-  user?: { id: number; username: string; role: string } | null
+  userId: number | null
+  user: { id: number; username: string; role: string } | null
 }
 
 export type Month = {
@@ -14,11 +14,14 @@ export type Month = {
   year: number
   monthNo: number
   closed: boolean
-  managerId?: number | null
+  managerId: number | null
   managerName?: string | null
+  manager?: { id: number; name: string } | null
 }
 
 export type MealSlot = 'breakfast' | 'lunch' | 'dinner'
+
+export type EntryStatus = 'pending' | 'approved' | 'rejected'
 
 export type Meal = {
   id: number
@@ -26,10 +29,13 @@ export type Meal = {
   memberName: string
   monthId: number
   recordDate: string
-  breakfastOn: boolean
-  lunchOn: boolean
-  dinnerOn: boolean
+  breakfastCount: number
+  lunchCount: number
+  dinnerCount: number
   dailyCount: number
+  status: EntryStatus
+  approvedBy: number | null
+  approvedAt: string | null
 }
 
 export type Bazar = {
@@ -38,9 +44,12 @@ export type Bazar = {
   memberName: string
   monthId: number
   amount: number
-  description?: string
+  description: string | null
   bazarDate: string
-  createdAt?: string
+  createdAt: string
+  status: EntryStatus
+  approvedBy: number | null
+  approvedAt: string | null
 }
 
 export type ExpenseCategory = 'gas' | 'electricity' | 'water' | 'internet' | 'other'
@@ -49,12 +58,15 @@ export type Expense = {
   id: number
   monthId: number
   amount: number
-  description?: string
-  category: ExpenseCategory
+  description: string | null
+  category: string
   expenseDate: string
-  paidById?: number | null
-  paidByName?: string | null
-  createdAt?: string
+  paidById: number | null
+  paidByName: string | null
+  createdAt: string
+  status: EntryStatus
+  approvedBy: number | null
+  approvedAt: string | null
 }
 
 export type Deposit = {
@@ -64,8 +76,8 @@ export type Deposit = {
   monthId: number
   amount: number
   depositDate: string
-  description?: string
-  createdAt?: string
+  description: string | null
+  createdAt: string
 }
 
 export type Rent = {
@@ -74,7 +86,7 @@ export type Rent = {
   memberName: string
   monthId: number
   amount: number
-  createdAt?: string
+  createdAt: string
 }
 
 export type LedgerEntryType = 'bazar' | 'expense' | 'deposit' | 'rent'
@@ -150,9 +162,9 @@ export type DailyReport = {
   members: Array<{
     memberId: number
     memberName: string
-    breakfastOn: boolean
-    lunchOn: boolean
-    dinnerOn: boolean
+    breakfastCount: number
+    lunchCount: number
+    dinnerCount: number
     dailyCount: number
   }>
   dayTotals: {
@@ -214,9 +226,9 @@ export type MealPayload = {
   member: { id: number }
   month: { id: number }
   recordDate: string
-  breakfastOn: boolean
-  lunchOn: boolean
-  dinnerOn: boolean
+  breakfastCount: number
+  lunchCount: number
+  dinnerCount: number
 }
 
 export type BazarPayload = {

@@ -177,10 +177,10 @@ function MonthDetailPage() {
           <ExpensesLedger monthId={id} closed={closed} managerId={month.managerId ?? null} />
         </TabsContent>
         <TabsContent value="deposits">
-          <DepositsLedger monthId={id} closed={closed} />
+          <DepositsLedger monthId={id} closed={closed} managerId={month.managerId ?? null} />
         </TabsContent>
         <TabsContent value="rents">
-          <RentsLedger monthId={id} closed={closed} />
+          <RentsLedger monthId={id} closed={closed} managerId={month.managerId ?? null} />
         </TabsContent>
         <TabsContent value="ledger">
           <LedgerFeed monthId={id} />

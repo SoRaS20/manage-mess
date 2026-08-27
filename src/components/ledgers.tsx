@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useAuthStore } from '@/store/auth'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Trash2, Check, X } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -22,6 +22,10 @@ import {
   useUpdateDeposit,
   useUpdateExpense,
   useUpdateRent,
+  useApproveBazar,
+  useRejectBazar,
+  useApproveExpense,
+  useRejectExpense,
 } from '@/api/hooks'
 import type { Bazar, Deposit, Expense, ExpenseCategory, Member, Rent } from '@/api/types'
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -125,6 +129,28 @@ function LedgerShell({
   )
 }
 
+function StatusBadge({ status }: { status: string }) {
+  if (status === 'pending') {
+    return (
+      <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+        Pending
+      </span>
+    )
+  }
+  if (status === 'rejected') {
+    return (
+      <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
+        Rejected
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+      Approved
+    </span>
+  )
+}
+
 function LoadingRows() {
   return (
     <div className="space-y-2 p-3">
@@ -178,6 +204,8 @@ export function BazarLedger({ monthId, closed, managerId }: { monthId: number; c
   const create = useCreateBazar(monthId)
   const update = useUpdateBazar(monthId)
   const remove = useDeleteBazar(monthId)
+  const approveB = useApproveBazar(monthId)
+  const rejectB = useRejectBazar(monthId)
   const [dialog, setDialog] = useState<{ open: boolean; edit: Bazar | null }>({ open: false, edit: null })
   const [deleteTarget, setDeleteTarget] = useState<Bazar | null>(null)
 
@@ -187,7 +215,7 @@ export function BazarLedger({ monthId, closed, managerId }: { monthId: number; c
       description="Grocery and shopping entries. Meal rate = total bazar / total meals."
       addLabel="Add bazar"
       onAdd={() => setDialog({ open: true, edit: null })}
-      disabled={closed || !isManagerOrAdmin}
+      disabled={closed}
       count={data?.length}
     >
       {isLoading ? (
@@ -202,22 +230,52 @@ export function BazarLedger({ monthId, closed, managerId }: { monthId: number; c
               <TableHead>Member</TableHead>
               <TableHead>Description</TableHead>
               <TableHead className="text-right">Amount</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.map((row) => (
-              <TableRow key={row.id}>
+              <TableRow key={row.id} className={row.status === 'pending' ? 'bg-yellow-50/50 dark:bg-yellow-950/20' : row.status === 'rejected' ? 'bg-destructive/5' : ''}>
                 <TableCell>{formatDate(row.bazarDate)}</TableCell>
                 <TableCell className="font-medium">{row.memberName}</TableCell>
                 <TableCell className="text-muted-foreground">{row.description || '—'}</TableCell>
                 <TableCell className="text-right tabular-nums">{formatTaka(row.amount)}</TableCell>
                 <TableCell>
-                  <RowActions
-                    disabled={closed || !isManagerOrAdmin}
-                    onEdit={() => setDialog({ open: true, edit: row })}
-                    onDelete={() => setDeleteTarget(row)}
-                  />
+                  <StatusBadge status={row.status} />
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center justify-end gap-1">
+                    {isManagerOrAdmin && !closed && row.status === 'pending' && user?.memberId && (
+                      <>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 text-green-600 hover:bg-green-50 hover:text-green-700"
+                          onClick={() => approveB.mutate({ id: row.id, approvedBy: user.memberId! })}
+                          title="Approve"
+                        >
+                          <Check className="size-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => rejectB.mutate({ id: row.id, approvedBy: user.memberId! })}
+                          title="Reject"
+                        >
+                          <X className="size-3.5" />
+                        </Button>
+                      </>
+                    )}
+                    <RowActions
+                      disabled={closed || !isManagerOrAdmin}
+                      onEdit={() => setDialog({ open: true, edit: row })}
+                      onDelete={() => setDeleteTarget(row)}
+                    />
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -238,6 +296,7 @@ export function BazarLedger({ monthId, closed, managerId }: { monthId: number; c
             amount: Number(values.amount),
             description: values.description || undefined,
             bazarDate: values.bazarDate,
+            status: isManagerOrAdmin ? 'approved' : 'pending',
           }
           if (existing) {
             await update.mutateAsync({ id: existing.id, data: payload })
@@ -332,6 +391,8 @@ export function ExpensesLedger({ monthId, closed, managerId }: { monthId: number
   const create = useCreateExpense(monthId)
   const update = useUpdateExpense(monthId)
   const remove = useDeleteExpense(monthId)
+  const approveE = useApproveExpense(monthId)
+  const rejectE = useRejectExpense(monthId)
   const [dialog, setDialog] = useState<{ open: boolean; edit: Expense | null }>({ open: false, edit: null })
   const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null)
 
@@ -341,7 +402,7 @@ export function ExpensesLedger({ monthId, closed, managerId }: { monthId: number
       description="Shared bills — split equally among active members."
       addLabel="Add expense"
       onAdd={() => setDialog({ open: true, edit: null })}
-      disabled={closed || !isManagerOrAdmin}
+      disabled={closed}
       count={data?.length}
     >
       {isLoading ? (
@@ -357,12 +418,13 @@ export function ExpensesLedger({ monthId, closed, managerId }: { monthId: number
               <TableHead>Description</TableHead>
               <TableHead>Paid by</TableHead>
               <TableHead className="text-right">Amount</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.map((row) => (
-              <TableRow key={row.id}>
+              <TableRow key={row.id} className={row.status === 'pending' ? 'bg-yellow-50/50 dark:bg-yellow-950/20' : row.status === 'rejected' ? 'bg-destructive/5' : ''}>
                 <TableCell>{formatDate(row.expenseDate)}</TableCell>
                 <TableCell>
                   <span className="rounded bg-muted px-1.5 py-0.5 text-xs capitalize">{row.category}</span>
@@ -371,7 +433,36 @@ export function ExpensesLedger({ monthId, closed, managerId }: { monthId: number
                 <TableCell>{row.paidByName ?? '—'}</TableCell>
                 <TableCell className="text-right tabular-nums">{formatTaka(row.amount)}</TableCell>
                 <TableCell>
-                  <RowActions disabled={closed || !isManagerOrAdmin} onEdit={() => setDialog({ open: true, edit: row })} onDelete={() => setDeleteTarget(row)} />
+                  <StatusBadge status={row.status} />
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center justify-end gap-1">
+                    {isManagerOrAdmin && !closed && row.status === 'pending' && user?.memberId && (
+                      <>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 text-green-600 hover:bg-green-50 hover:text-green-700"
+                          onClick={() => approveE.mutate({ id: row.id, approvedBy: user.memberId! })}
+                          title="Approve"
+                        >
+                          <Check className="size-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => rejectE.mutate({ id: row.id, approvedBy: user.memberId! })}
+                          title="Reject"
+                        >
+                          <X className="size-3.5" />
+                        </Button>
+                      </>
+                    )}
+                    <RowActions disabled={closed || !isManagerOrAdmin} onEdit={() => setDialog({ open: true, edit: row })} onDelete={() => setDeleteTarget(row)} />
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -394,6 +485,7 @@ export function ExpensesLedger({ monthId, closed, managerId }: { monthId: number
             category: values.category,
             expenseDate: values.expenseDate,
             paidBy: paidById ? { id: paidById } : undefined,
+            status: isManagerOrAdmin ? 'approved' : 'pending',
           }
           if (existing) {
             await update.mutateAsync({ id: existing.id, data: payload })
@@ -422,7 +514,7 @@ export function ExpensesLedger({ monthId, closed, managerId }: { monthId: number
 
 function expenseFormValues(edit: Expense | null) {
   return edit
-    ? { amount: String(edit.amount), description: edit.description ?? '', category: edit.category, expenseDate: edit.expenseDate, paidById: edit.paidById != null ? String(edit.paidById) : 'none' }
+    ? { amount: String(edit.amount), description: edit.description ?? '', category: edit.category as ExpenseCategory, expenseDate: edit.expenseDate, paidById: edit.paidById != null ? String(edit.paidById) : 'none' }
     : { amount: '', description: '', category: 'other' as const, expenseDate: todayISO(), paidById: 'none' }
 }
 
@@ -511,9 +603,9 @@ const depositSchema = z.object({
 
 type DepositForm = z.infer<typeof depositSchema>
 
-export function DepositsLedger({ monthId, closed }: { monthId: number; closed: boolean }) {
+export function DepositsLedger({ monthId, closed, managerId }: { monthId: number; closed: boolean; managerId: number | null }) {
   const user = useAuthStore((s) => s.user)
-  const isAdmin = user?.role === 'ADMIN'
+  const isManagerOrAdmin = user?.role === 'ADMIN' || (user?.memberId !== null && user?.memberId === managerId)
   const { data, isLoading } = useDeposits(monthId)
   const create = useCreateDeposit(monthId)
   const update = useUpdateDeposit(monthId)
@@ -527,7 +619,7 @@ export function DepositsLedger({ monthId, closed }: { monthId: number; closed: b
       description="Rent deposits paid by members for the month."
       addLabel="Add rent deposit"
       onAdd={() => setDialog({ open: true, edit: null })}
-      disabled={closed || !isAdmin}
+      disabled={closed || !isManagerOrAdmin}
       count={data?.length}
     >
       {isLoading ? (
@@ -553,7 +645,7 @@ export function DepositsLedger({ monthId, closed }: { monthId: number; closed: b
                 <TableCell className="text-muted-foreground">{row.description || '—'}</TableCell>
                 <TableCell className="text-right tabular-nums">{formatTaka(row.amount)}</TableCell>
                 <TableCell>
-                  <RowActions disabled={closed || !isAdmin} onEdit={() => setDialog({ open: true, edit: row })} onDelete={() => setDeleteTarget(row)} />
+                  <RowActions disabled={closed || !isManagerOrAdmin} onEdit={() => setDialog({ open: true, edit: row })} onDelete={() => setDeleteTarget(row)} />
                 </TableCell>
               </TableRow>
             ))}
@@ -655,9 +747,9 @@ const rentSchema = z.object({
 
 type RentForm = z.infer<typeof rentSchema>
 
-export function RentsLedger({ monthId, closed }: { monthId: number; closed: boolean }) {
+export function RentsLedger({ monthId, closed, managerId }: { monthId: number; closed: boolean; managerId: number | null }) {
   const user = useAuthStore((s) => s.user)
-  const isAdmin = user?.role === 'ADMIN'
+  const isManagerOrAdmin = user?.role === 'ADMIN' || (user?.memberId !== null && user?.memberId === managerId)
   const { data, isLoading } = useRents(monthId)
   const { data: members } = useMembers()
   const create = useCreateRent(monthId)
@@ -674,7 +766,7 @@ export function RentsLedger({ monthId, closed }: { monthId: number; closed: bool
       description="Monthly rent per member (unique per member + month)."
       addLabel={missingMembers.length ? 'Set rent' : 'Add rent'}
       onAdd={() => setDialog({ open: true, edit: null })}
-      disabled={closed || !isAdmin}
+      disabled={closed || !isManagerOrAdmin}
       count={data?.length}
     >
       {isLoading ? (
@@ -696,7 +788,7 @@ export function RentsLedger({ monthId, closed }: { monthId: number; closed: bool
                 <TableCell className="font-medium">{row.memberName}</TableCell>
                 <TableCell className="text-right tabular-nums">{formatTaka(row.amount)}</TableCell>
                 <TableCell>
-                  <RowActions disabled={closed || !isAdmin} onEdit={() => setDialog({ open: true, edit: row })} onDelete={() => setDeleteTarget(row)} />
+                  <RowActions disabled={closed || !isManagerOrAdmin} onEdit={() => setDialog({ open: true, edit: row })} onDelete={() => setDeleteTarget(row)} />
                 </TableCell>
               </TableRow>
             ))}

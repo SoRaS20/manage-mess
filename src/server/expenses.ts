@@ -22,6 +22,9 @@ export const listExpensesByMonth = createServerFn({ method: 'GET' as const })
       paidById: r.paidById,
       paidByName: r.paidBy?.name ?? null,
       createdAt: r.createdAt?.toISOString(),
+      status: r.status as 'pending' | 'approved' | 'rejected',
+      approvedBy: r.approvedBy,
+      approvedAt: r.approvedAt?.toISOString() ?? null,
     }))
   })
 
@@ -34,6 +37,7 @@ export const createExpense = createServerFn({ method: 'POST' as const })
       category: string
       expenseDate: string
       paidById?: number
+      status?: string
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -47,6 +51,7 @@ export const createExpense = createServerFn({ method: 'POST' as const })
         category: data.category,
         expenseDate: data.expenseDate,
         paidById: data.paidById || null,
+        status: data.status || 'approved',
       })
       .returning()
     return created
@@ -77,6 +82,36 @@ export const updateExpense = createServerFn({ method: 'POST' as const })
     if (fields.paidById !== undefined) updateData.paidById = fields.paidById || null
 
     const [updated] = await db.update(expenses).set(updateData).where(eq(expenses.id, id)).returning()
+    return updated
+  })
+
+export const approveExpense = createServerFn({ method: 'POST' as const })
+  .validator((data: { id: number; approvedBy: number }) => data)
+  .handler(async ({ data }) => {
+    const [existing] = await db.select().from(expenses).where(eq(expenses.id, data.id)).limit(1)
+    if (!existing) throw new Error('Expense not found')
+    await assertMonthOpen(existing.monthId)
+
+    const [updated] = await db
+      .update(expenses)
+      .set({ status: 'approved', approvedBy: data.approvedBy, approvedAt: new Date() })
+      .where(eq(expenses.id, data.id))
+      .returning()
+    return updated
+  })
+
+export const rejectExpense = createServerFn({ method: 'POST' as const })
+  .validator((data: { id: number; approvedBy: number }) => data)
+  .handler(async ({ data }) => {
+    const [existing] = await db.select().from(expenses).where(eq(expenses.id, data.id)).limit(1)
+    if (!existing) throw new Error('Expense not found')
+    await assertMonthOpen(existing.monthId)
+
+    const [updated] = await db
+      .update(expenses)
+      .set({ status: 'rejected', approvedBy: data.approvedBy, approvedAt: new Date() })
+      .where(eq(expenses.id, data.id))
+      .returning()
     return updated
   })
 

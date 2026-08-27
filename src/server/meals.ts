@@ -18,10 +18,13 @@ export const getMealsByMonth = createServerFn({ method: 'GET' as const })
       memberName: r.member.name,
       monthId: r.monthId,
       recordDate: r.recordDate,
-      breakfastOn: r.breakfastOn,
-      lunchOn: r.lunchOn,
-      dinnerOn: r.dinnerOn,
+      breakfastCount: r.breakfastCount,
+      lunchCount: r.lunchCount,
+      dinnerCount: r.dinnerCount,
       dailyCount: dailyCount(r),
+      status: r.status as 'pending' | 'approved' | 'rejected',
+      approvedBy: r.approvedBy,
+      approvedAt: r.approvedAt?.toISOString() ?? null,
     }))
   })
 
@@ -38,10 +41,13 @@ export const getMealsByDate = createServerFn({ method: 'GET' as const })
       memberName: r.member.name,
       monthId: r.monthId,
       recordDate: r.recordDate,
-      breakfastOn: r.breakfastOn,
-      lunchOn: r.lunchOn,
-      dinnerOn: r.dinnerOn,
+      breakfastCount: r.breakfastCount,
+      lunchCount: r.lunchCount,
+      dinnerCount: r.dinnerCount,
       dailyCount: dailyCount(r),
+      status: r.status as 'pending' | 'approved' | 'rejected',
+      approvedBy: r.approvedBy,
+      approvedAt: r.approvedAt?.toISOString() ?? null,
     }))
   })
 
@@ -51,9 +57,10 @@ export const createMeal = createServerFn({ method: 'POST' as const })
       memberId: number
       monthId: number
       recordDate: string
-      breakfastOn: boolean
-      lunchOn: boolean
-      dinnerOn: boolean
+      breakfastCount: number
+      lunchCount: number
+      dinnerCount: number
+      status?: string
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -64,16 +71,17 @@ export const createMeal = createServerFn({ method: 'POST' as const })
         memberId: data.memberId,
         monthId: data.monthId,
         recordDate: data.recordDate,
-        breakfastOn: data.breakfastOn,
-        lunchOn: data.lunchOn,
-        dinnerOn: data.dinnerOn,
+        breakfastCount: data.breakfastCount,
+        lunchCount: data.lunchCount,
+        dinnerCount: data.dinnerCount,
+        status: data.status || 'approved',
       })
       .returning()
     return created
   })
 
-export const toggleMeal = createServerFn({ method: 'POST' as const })
-  .validator((data: { mealId: number; slot: string; on: boolean }) => data)
+export const updateMealSlot = createServerFn({ method: 'POST' as const })
+  .validator((data: { mealId: number; slot: string; count: number; status?: string }) => data)
   .handler(async ({ data }) => {
     const slot = data.slot.toLowerCase()
     if (slot !== 'breakfast' && slot !== 'lunch' && slot !== 'dinner') {
@@ -85,8 +93,36 @@ export const toggleMeal = createServerFn({ method: 'POST' as const })
 
     await assertMonthOpen(meal.monthId)
 
-    const field = slot === 'breakfast' ? 'breakfastOn' : slot === 'lunch' ? 'lunchOn' : 'dinnerOn'
-    const [updated] = await db.update(meals).set({ [field]: data.on }).where(eq(meals.id, data.mealId)).returning()
+    const field = slot === 'breakfast' ? 'breakfastCount' : slot === 'lunch' ? 'lunchCount' : 'dinnerCount'
+    const updateData: Record<string, unknown> = { [field]: data.count }
+    if (data.status) {
+      updateData.status = data.status
+    }
+    const [updated] = await db.update(meals).set(updateData).where(eq(meals.id, data.mealId)).returning()
+    return updated
+  })
+
+export const toggleMeal = createServerFn({ method: 'POST' as const })
+  .validator((data: { mealId: number; slot: string; on: boolean; status?: string }) => data)
+  .handler(async ({ data }) => {
+    const slot = data.slot.toLowerCase()
+    if (slot !== 'breakfast' && slot !== 'lunch' && slot !== 'dinner') {
+      throw new Error('Missing "slot" (breakfast|lunch|dinner)')
+    }
+
+    const [meal] = await db.select().from(meals).where(eq(meals.id, data.mealId)).limit(1)
+    if (!meal) throw new Error('Meal not found')
+
+    await assertMonthOpen(meal.monthId)
+
+    const field = slot === 'breakfast' ? 'breakfastCount' : slot === 'lunch' ? 'lunchCount' : 'dinnerCount'
+    const currentCount = slot === 'breakfast' ? meal.breakfastCount : slot === 'lunch' ? meal.lunchCount : meal.dinnerCount
+    const newCount = data.on ? Math.max(currentCount, 1) : 0
+    const updateData: Record<string, unknown> = { [field]: newCount }
+    if (data.status) {
+      updateData.status = data.status
+    }
+    const [updated] = await db.update(meals).set(updateData).where(eq(meals.id, data.mealId)).returning()
     return updated
   })
 
@@ -94,9 +130,10 @@ export const updateMeal = createServerFn({ method: 'POST' as const })
   .validator(
     (data: {
       mealId: number
-      breakfastOn?: boolean
-      lunchOn?: boolean
-      dinnerOn?: boolean
+      breakfastCount?: number
+      lunchCount?: number
+      dinnerCount?: number
+      status?: string
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -106,6 +143,36 @@ export const updateMeal = createServerFn({ method: 'POST' as const })
     await assertMonthOpen(meal.monthId)
 
     const [updated] = await db.update(meals).set(flags).where(eq(meals.id, mealId)).returning()
+    return updated
+  })
+
+export const approveMeal = createServerFn({ method: 'POST' as const })
+  .validator((data: { mealId: number; approvedBy: number }) => data)
+  .handler(async ({ data }) => {
+    const [meal] = await db.select().from(meals).where(eq(meals.id, data.mealId)).limit(1)
+    if (!meal) throw new Error('Meal not found')
+    await assertMonthOpen(meal.monthId)
+
+    const [updated] = await db
+      .update(meals)
+      .set({ status: 'approved', approvedBy: data.approvedBy, approvedAt: new Date() })
+      .where(eq(meals.id, data.mealId))
+      .returning()
+    return updated
+  })
+
+export const rejectMeal = createServerFn({ method: 'POST' as const })
+  .validator((data: { mealId: number; approvedBy: number }) => data)
+  .handler(async ({ data }) => {
+    const [meal] = await db.select().from(meals).where(eq(meals.id, data.mealId)).limit(1)
+    if (!meal) throw new Error('Meal not found')
+    await assertMonthOpen(meal.monthId)
+
+    const [updated] = await db
+      .update(meals)
+      .set({ status: 'rejected', approvedBy: data.approvedBy, approvedAt: new Date() })
+      .where(eq(meals.id, data.mealId))
+      .returning()
     return updated
   })
 
@@ -145,9 +212,10 @@ export const generateMeals = createServerFn({ method: 'POST' as const })
             memberId: member.id,
             monthId: data.monthId,
             recordDate: dateStr,
-            breakfastOn: true,
-            lunchOn: true,
-            dinnerOn: true,
+            breakfastCount: 1,
+            lunchCount: 1,
+            dinnerCount: 1,
+            status: 'approved',
           })
           created++
         }

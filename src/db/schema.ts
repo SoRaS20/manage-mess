@@ -11,6 +11,8 @@ import {
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
+type EntryStatus = 'pending' | 'approved' | 'rejected'
+
 // ── Users ──────────────────────────────────────────────
 export const users = pgTable('app_user', {
   id: serial('id').primaryKey(),
@@ -55,9 +57,12 @@ export const meals = pgTable(
       .notNull()
       .references(() => months.id, { onDelete: 'cascade' }),
     recordDate: date('record_date').notNull(),
-    breakfastOn: boolean('breakfast_on').notNull().default(true),
-    lunchOn: boolean('lunch_on').notNull().default(true),
-    dinnerOn: boolean('dinner_on').notNull().default(true),
+    breakfastCount: integer('breakfast_count').notNull().default(1),
+    lunchCount: integer('lunch_count').notNull().default(1),
+    dinnerCount: integer('dinner_count').notNull().default(1),
+    status: varchar('status', { length: 10 }).notNull().default('approved'),
+    approvedBy: integer('approved_by').references(() => members.id, { onDelete: 'set null' }),
+    approvedAt: timestamp('approved_at'),
   },
   (t) => [uniqueIndex('meal_member_date_idx').on(t.memberId, t.recordDate)],
 )
@@ -75,6 +80,9 @@ export const bazar = pgTable('bazar', {
   description: varchar('description', { length: 255 }),
   bazarDate: date('bazar_date').notNull().defaultNow(),
   createdAt: timestamp('date_created').notNull().defaultNow(),
+  status: varchar('status', { length: 10 }).notNull().default('approved'),
+  approvedBy: integer('approved_by').references(() => members.id, { onDelete: 'set null' }),
+  approvedAt: timestamp('approved_at'),
 })
 
 // ── Expenses ───────────────────────────────────────────
@@ -89,6 +97,9 @@ export const expenses = pgTable('expense', {
   expenseDate: date('expense_date').notNull().defaultNow(),
   paidById: integer('paid_by_id').references(() => members.id, { onDelete: 'set null' }),
   createdAt: timestamp('date_created').notNull().defaultNow(),
+  status: varchar('status', { length: 10 }).notNull().default('approved'),
+  approvedBy: integer('approved_by').references(() => members.id, { onDelete: 'set null' }),
+  approvedAt: timestamp('approved_at'),
 })
 
 // ── Deposits ───────────────────────────────────────────

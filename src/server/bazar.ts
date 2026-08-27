@@ -21,6 +21,9 @@ export const listBazarByMonth = createServerFn({ method: 'GET' as const })
       description: r.description,
       bazarDate: r.bazarDate,
       createdAt: r.createdAt?.toISOString(),
+      status: r.status as 'pending' | 'approved' | 'rejected',
+      approvedBy: r.approvedBy,
+      approvedAt: r.approvedAt?.toISOString() ?? null,
     }))
   })
 
@@ -32,6 +35,7 @@ export const createBazar = createServerFn({ method: 'POST' as const })
       amount: number
       description?: string
       bazarDate: string
+      status?: string
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -44,6 +48,7 @@ export const createBazar = createServerFn({ method: 'POST' as const })
         amount: String(data.amount),
         description: data.description || null,
         bazarDate: data.bazarDate,
+        status: data.status || 'approved',
       })
       .returning()
     return created
@@ -72,6 +77,36 @@ export const updateBazar = createServerFn({ method: 'POST' as const })
     if (fields.bazarDate !== undefined) updateData.bazarDate = fields.bazarDate
 
     const [updated] = await db.update(bazar).set(updateData).where(eq(bazar.id, id)).returning()
+    return updated
+  })
+
+export const approveBazar = createServerFn({ method: 'POST' as const })
+  .validator((data: { id: number; approvedBy: number }) => data)
+  .handler(async ({ data }) => {
+    const [existing] = await db.select().from(bazar).where(eq(bazar.id, data.id)).limit(1)
+    if (!existing) throw new Error('Bazar entry not found')
+    await assertMonthOpen(existing.monthId)
+
+    const [updated] = await db
+      .update(bazar)
+      .set({ status: 'approved', approvedBy: data.approvedBy, approvedAt: new Date() })
+      .where(eq(bazar.id, data.id))
+      .returning()
+    return updated
+  })
+
+export const rejectBazar = createServerFn({ method: 'POST' as const })
+  .validator((data: { id: number; approvedBy: number }) => data)
+  .handler(async ({ data }) => {
+    const [existing] = await db.select().from(bazar).where(eq(bazar.id, data.id)).limit(1)
+    if (!existing) throw new Error('Bazar entry not found')
+    await assertMonthOpen(existing.monthId)
+
+    const [updated] = await db
+      .update(bazar)
+      .set({ status: 'rejected', approvedBy: data.approvedBy, approvedAt: new Date() })
+      .where(eq(bazar.id, data.id))
+      .returning()
     return updated
   })
 

@@ -150,11 +150,13 @@ export function ReportsTab({ monthId }: { monthId: number }) {
                     {daily.members.map((m) => (
                       <TableRow key={m.memberId}>
                         <TableCell className="font-medium">{m.memberName}</TableCell>
-                        {[m.breakfastOn, m.lunchOn, m.dinnerOn].map((on, i) => (
+                        {[m.breakfastCount, m.lunchCount, m.dinnerCount].map((count, i) => (
                           <TableCell key={i} className="text-center">
                             <span
-                              className={`inline-block size-3.5 rounded-full ${on ? 'bg-primary' : 'bg-muted'}`}
-                            />
+                              className={`inline-flex size-5 items-center justify-center rounded-full text-[10px] font-bold ${count > 0 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground/40'}`}
+                            >
+                              {count > 0 ? count : '—'}
+                            </span>
                           </TableCell>
                         ))}
                         <TableCell className="text-right tabular-nums">{formatNumber(m.dailyCount)}</TableCell>

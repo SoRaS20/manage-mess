@@ -6,7 +6,7 @@ import { round2, dailyCount } from './utils'
 
 async function mealCountFor(memberId: number, monthId: number): Promise<number> {
   const rows = await db.query.meals.findMany({
-    where: and(eq(meals.memberId, memberId), eq(meals.monthId, monthId)),
+    where: and(eq(meals.memberId, memberId), eq(meals.monthId, monthId), eq(meals.status, 'approved')),
   })
   return rows.reduce((sum, r) => sum + dailyCount(r), 0)
 }
@@ -15,7 +15,7 @@ async function bazarFor(memberId: number, monthId: number): Promise<number> {
   const [agg] = await db
     .select({ total: sql<string>`COALESCE(SUM(${bazar.amount}), 0)` })
     .from(bazar)
-    .where(and(eq(bazar.memberId, memberId), eq(bazar.monthId, monthId)))
+    .where(and(eq(bazar.memberId, memberId), eq(bazar.monthId, monthId), eq(bazar.status, 'approved')))
   return Number(agg.total)
 }
 
@@ -23,7 +23,7 @@ async function expensePaidByFor(memberId: number, monthId: number): Promise<numb
   const [agg] = await db
     .select({ total: sql<string>`COALESCE(SUM(${expenses.amount}), 0)` })
     .from(expenses)
-    .where(and(eq(expenses.paidById, memberId), eq(expenses.monthId, monthId)))
+    .where(and(eq(expenses.paidById, memberId), eq(expenses.monthId, monthId), eq(expenses.status, 'approved')))
   return Number(agg.total)
 }
 
@@ -61,23 +61,21 @@ async function buildSummary(monthId: number): Promise<Summary | null> {
   const [mealAgg] = await db
     .select({
       total: sql<string>`COALESCE(SUM(
-        (CASE WHEN ${meals.breakfastOn} THEN 0.5 ELSE 0 END) +
-        (CASE WHEN ${meals.lunchOn} THEN 1.0 ELSE 0 END) +
-        (CASE WHEN ${meals.dinnerOn} THEN 1.0 ELSE 0 END)
+        ${meals.breakfastCount} * 0.5 + ${meals.lunchCount} * 1.0 + ${meals.dinnerCount} * 1.0
       ), 0)`,
     })
     .from(meals)
-    .where(eq(meals.monthId, monthId))
+    .where(and(eq(meals.monthId, monthId), eq(meals.status, 'approved')))
 
   const [bazarAgg] = await db
     .select({ total: sql<string>`COALESCE(SUM(${bazar.amount}), 0)` })
     .from(bazar)
-    .where(eq(bazar.monthId, monthId))
+    .where(and(eq(bazar.monthId, monthId), eq(bazar.status, 'approved')))
 
   const [expenseAgg] = await db
     .select({ total: sql<string>`COALESCE(SUM(${expenses.amount}), 0)` })
     .from(expenses)
-    .where(eq(expenses.monthId, monthId))
+    .where(and(eq(expenses.monthId, monthId), eq(expenses.status, 'approved')))
 
   const [depositAgg] = await db
     .select({ total: sql<string>`COALESCE(SUM(${deposits.amount}), 0)` })
@@ -220,30 +218,30 @@ export const getDailyReport = createServerFn({ method: 'GET' as const })
   .validator((data: { monthId: number; date: string }) => data)
   .handler(async ({ data }) => {
     const dayMeals = await db.query.meals.findMany({
-      where: and(eq(meals.monthId, data.monthId), eq(meals.recordDate, data.date)),
+      where: and(eq(meals.monthId, data.monthId), eq(meals.recordDate, data.date), eq(meals.status, 'approved')),
       with: { member: { columns: { id: true, name: true } } },
     })
 
     const memberRows = dayMeals.map((r) => ({
       memberId: r.memberId,
       memberName: r.member.name,
-      breakfastOn: r.breakfastOn,
-      lunchOn: r.lunchOn,
-      dinnerOn: r.dinnerOn,
+      breakfastCount: r.breakfastCount,
+      lunchCount: r.lunchCount,
+      dinnerCount: r.dinnerCount,
       dailyCount: dailyCount(r),
     }))
 
     const totalMeals = memberRows.reduce((s, r) => s + r.dailyCount, 0)
 
     const monthBazar = await db.query.bazar.findMany({
-      where: eq(bazar.monthId, data.monthId),
+      where: and(eq(bazar.monthId, data.monthId), eq(bazar.status, 'approved')),
     })
     const bazarThatDay = monthBazar
       .filter((b) => b.bazarDate === data.date)
       .reduce((s, b) => s + Number(b.amount), 0)
 
     const monthExpenses = await db.query.expenses.findMany({
-      where: eq(expenses.monthId, data.monthId),
+      where: and(eq(expenses.monthId, data.monthId), eq(expenses.status, 'approved')),
     })
     const expensesThatDay = monthExpenses
       .filter((e) => e.expenseDate === data.date)
@@ -267,7 +265,7 @@ export const getMemberReport = createServerFn({ method: 'GET' as const })
     if (!month) return null
 
     const memberMeals = await db.query.meals.findMany({
-      where: and(eq(meals.memberId, data.memberId), eq(meals.monthId, data.monthId)),
+      where: and(eq(meals.memberId, data.memberId), eq(meals.monthId, data.monthId), eq(meals.status, 'approved')),
     })
 
     const byDay = memberMeals.map((r) => ({ date: r.recordDate, dailyCount: dailyCount(r) }))
@@ -279,7 +277,7 @@ export const getMemberReport = createServerFn({ method: 'GET' as const })
     const depositList = memberDeposits.map((r) => ({ date: r.depositDate, amount: Number(r.amount) }))
 
     const summary = await buildSummary(data.monthId)
-    const balance = await buildBalance(member.name, member.name, data.monthId, summary!)
+    const balance = await buildBalance(member.id, member.name, data.monthId, summary!)
 
     return {
       member: { id: member.id, name: member.name },

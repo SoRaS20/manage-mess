@@ -6,8 +6,8 @@ export function round2(n: number): number {
   return Math.round(n * 100) / 100
 }
 
-export function dailyCount(meal: { breakfastOn: boolean; lunchOn: boolean; dinnerOn: boolean }): number {
-  return (meal.breakfastOn ? 0.5 : 0) + (meal.lunchOn ? 1 : 0) + (meal.dinnerOn ? 1 : 0)
+export function dailyCount(meal: { breakfastCount: number; lunchCount: number; dinnerCount: number }): number {
+  return meal.breakfastCount * 0.5 + meal.lunchCount * 1.0 + meal.dinnerCount * 1.0
 }
 
 export async function assertMonthOpen(monthId: number): Promise<void> {

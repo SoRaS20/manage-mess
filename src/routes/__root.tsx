@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Link, Outlet, createRootRoute, redirect, useLocation, useRouter, HeadContent, Scripts } from '@tanstack/react-router'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { LayoutDashboard, Receipt, Users, CalendarRange, LogOut, Menu, X, History } from 'lucide-react'
+import { LayoutDashboard, Receipt, Users, CalendarRange, LogOut, Menu, X, History, CalendarDays } from 'lucide-react'
 import { Toaster } from '@/components/ui/sonner'
 import { useAuthStore } from '@/store/auth'
 import { ThemeProvider } from '@/providers/theme-provider'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { useMonths } from '@/api/hooks'
 import { queryClient } from '@/lib/query'
 import { cn } from '@/lib/utils'
 import appCss from '@/index.css?url'
@@ -113,6 +114,12 @@ function Brand({ small = false }: { small?: boolean }) {
 }
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+  const { data: months } = useMonths()
+  const now = new Date()
+  const currentMonth = months?.find(
+    (m) => m.year === now.getFullYear() && m.monthNo === now.getMonth() + 1,
+  )
+
   return (
     <>
       {navItems.map((item) => (
@@ -128,6 +135,18 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
           {item.label}
         </Link>
       ))}
+      {currentMonth && (
+        <Link
+          to="/months/$monthId"
+          params={{ monthId: String(currentMonth.id) }}
+          onClick={onNavigate}
+          className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          activeProps={{ className: 'bg-sidebar-accent text-sidebar-accent-foreground' }}
+        >
+          <CalendarDays className="size-4" />
+          Member Entry
+        </Link>
+      )}
     </>
   )
 }
