@@ -1,10 +1,12 @@
 import { createServerFn } from '@tanstack/react-start'
-import { eq } from 'drizzle-orm'
+import { eq, and, gt, lt, desc, ne } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
 import { db } from '../db'
-import { users, members } from '../db/schema'
+import { users, members, sessions } from '../db/schema'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'mess_management_dev_secret'
+const SESSION_EXPIRY_DAYS = 7
+const SESSION_UPDATE_AGE_DAYS = 1
 
 export interface AuthUser {
   id: number
@@ -117,10 +119,136 @@ export const loginServerFn = createServerFn({ method: 'POST' as const })
     const userPayload: AuthUser = { id: user.id, username: user.username, role: user.role as 'ADMIN' | 'MEMBER', memberId }
     const token = await createJwtToken(userPayload)
 
+    // Create session record
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + SESSION_EXPIRY_DAYS)
+
+    await db.insert(sessions).values({
+      token,
+      userId: user.id,
+      expiresAt,
+      createdAt: new Date(),
+      lastActiveAt: new Date(),
+    })
+
     return {
       token,
       user: userPayload,
     }
+  })
+
+export const changePasswordServerFn = createServerFn({ method: 'POST' as const })
+  .validator((data: { currentPassword: string; newPassword: string; token: string }) => data)
+  .handler(async ({ data }) => {
+    const authUser = await verifyToken(data.token)
+    if (!authUser) throw new Error('Not authenticated')
+
+    const [user] = await db.select().from(users).where(eq(users.id, authUser.id)).limit(1)
+    if (!user) throw new Error('User not found')
+
+    const valid = await bcrypt.compare(data.currentPassword, user.password)
+    if (!valid) throw new Error('Current password is incorrect')
+
+    const hash = await bcrypt.hash(data.newPassword, 10)
+    await db.update(users).set({ password: hash }).where(eq(users.id, authUser.id))
+
+    // Revoke all other sessions (keep current one)
+    const currentSession = await db
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(eq(sessions.token, data.token))
+      .limit(1)
+
+    if (currentSession[0]) {
+      await db
+        .delete(sessions)
+        .where(
+          and(
+            eq(sessions.userId, authUser.id),
+            ne(sessions.id, currentSession[0].id)
+          )
+        )
+    }
+
+    return { message: 'Password changed successfully' }
+  })
+
+export const listSessionsServerFn = createServerFn({ method: 'GET' as const })
+  .validator((data: { token: string }) => data)
+  .handler(async ({ data }) => {
+    const authUser = await verifyToken(data.token)
+    if (!authUser) throw new Error('Not authenticated')
+
+    const now = new Date()
+    const userSessions = await db
+      .select({
+        id: sessions.id,
+        token: sessions.token,
+        expiresAt: sessions.expiresAt,
+        ipAddress: sessions.ipAddress,
+        userAgent: sessions.userAgent,
+        createdAt: sessions.createdAt,
+        lastActiveAt: sessions.lastActiveAt,
+      })
+      .from(sessions)
+      .where(
+        and(
+          eq(sessions.userId, authUser.id),
+          gt(sessions.expiresAt, now)
+        )
+      )
+      .orderBy(desc(sessions.lastActiveAt))
+
+    return userSessions.map((s) => ({
+      ...s,
+      isCurrent: s.token === data.token,
+      expiresAt: s.expiresAt.toISOString(),
+      createdAt: s.createdAt.toISOString(),
+      lastActiveAt: s.lastActiveAt.toISOString(),
+    }))
+  })
+
+export const revokeSessionServerFn = createServerFn({ method: 'POST' as const })
+  .validator((data: { token: string; sessionId: number }) => data)
+  .handler(async ({ data }) => {
+    const authUser = await verifyToken(data.token)
+    if (!authUser) throw new Error('Not authenticated')
+
+    await db
+      .delete(sessions)
+      .where(
+        and(
+          eq(sessions.id, data.sessionId),
+          eq(sessions.userId, authUser.id)
+        )
+      )
+
+    return { message: 'Session revoked' }
+  })
+
+export const revokeOtherSessionsServerFn = createServerFn({ method: 'POST' as const })
+  .validator((data: { token: string }) => data)
+  .handler(async ({ data }) => {
+    const authUser = await verifyToken(data.token)
+    if (!authUser) throw new Error('Not authenticated')
+
+    await db
+      .delete(sessions)
+      .where(
+        and(
+          eq(sessions.userId, authUser.id),
+          ne(sessions.token, data.token)
+        )
+      )
+
+    return { message: 'Other sessions revoked' }
+  })
+
+export const cleanupExpiredSessionsFn = createServerFn({ method: 'POST' as const })
+  .handler(async () => {
+    const now = new Date()
+    await db.delete(sessions).where(lt(sessions.expiresAt, now))
+    return { message: 'Expired sessions cleaned up' }
   })
 
 export const createSeedAdminFn = createServerFn({ method: 'POST' as const })

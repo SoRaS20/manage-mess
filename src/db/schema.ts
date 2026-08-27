@@ -21,6 +21,20 @@ export const users = pgTable('app_user', {
   role: varchar('role', { length: 10 }).notNull().default('MEMBER'),
 })
 
+// ── Sessions ───────────────────────────────────────────
+export const sessions = pgTable('session', {
+  id: serial('id').primaryKey(),
+  token: varchar('token', { length: 500 }).notNull().unique(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  expiresAt: timestamp('expires_at').notNull(),
+  ipAddress: varchar('ip_address', { length: 45 }),
+  userAgent: varchar('user_agent', { length: 500 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  lastActiveAt: timestamp('last_active_at').notNull().defaultNow(),
+})
+
 // ── Members ────────────────────────────────────────────
 export const members = pgTable('member', {
   id: serial('id').primaryKey(),
@@ -135,11 +149,12 @@ export const rents = pgTable(
 )
 
 // ── Relations ──────────────────────────────────────────
-export const usersRelations = relations(users, ({ one }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   member: one(members, {
     fields: [users.id],
     references: [members.userId],
   }),
+  sessions: many(sessions),
 }))
 
 export const membersRelations = relations(members, ({ one, many }) => ({
