@@ -28,6 +28,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { formatDate, todayISO } from '@/lib/format'
+import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/members')({
   component: MembersPage,
@@ -167,9 +168,9 @@ function MembersPage() {
         )}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">All members</CardTitle>
+      <Card className="shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold">All members</CardTitle>
           <CardDescription>Toggle the status switch to deactivate a member — meals stop generating for them.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -188,46 +189,60 @@ function MembersPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Joined</TableHead>
-                  <TableHead className="w-24">Status</TableHead>
+                  <TableHead className="w-28">Status</TableHead>
                   <TableHead className="w-32 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {sorted.map((m) => (
-                  <TableRow key={m.id} className={m.banned ? 'opacity-50 bg-muted/30' : ''}>
-                    <TableCell className="font-medium">{m.name} {m.banned && <span className="text-xs text-destructive ml-2">(Banned)</span>}</TableCell>
+                  <TableRow key={m.id} className={cn('transition-colors', m.banned ? 'opacity-50 bg-muted/30' : 'hover:bg-muted/50')}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <div className={cn('flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold', m.active && !m.banned ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground')}>
+                          {m.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="font-medium">{m.name}</div>
+                          {m.banned && <span className="text-xs text-destructive">Banned</span>}
+                        </div>
+                      </div>
+                    </TableCell>
                     <TableCell className="text-muted-foreground">{m.phone || '—'}</TableCell>
-                    <TableCell>{formatDate(m.joinDate)}</TableCell>
+                    <TableCell className="text-sm">{formatDate(m.joinDate)}</TableCell>
                     <TableCell>
                       <button
                         onClick={() => toggleActive.mutate(m.id)}
                         disabled={toggleActive.isPending || !isAdmin || m.banned}
                         title={m.active ? 'Deactivate' : 'Activate'}
-                        className="flex items-center gap-1.5 text-xs font-medium disabled:opacity-50"
+                        className="flex items-center gap-2 text-xs font-medium disabled:opacity-50"
                       >
                         <span
-                          className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${m.active ? 'bg-primary' : 'bg-input'}`}
+                          className={cn('relative inline-flex h-5 w-9 items-center rounded-full transition-colors', m.active ? 'bg-primary' : 'bg-input')}
                         >
                           <span
-                            className={`inline-block size-3 rounded-full bg-white transition-transform ${m.active ? 'translate-x-3.5' : 'translate-x-0.5'}`}
+                            className={cn('inline-block size-3.5 rounded-full bg-white shadow-sm transition-transform', m.active ? 'translate-x-4' : 'translate-x-0.5')}
                           />
                         </span>
-                        {m.active ? <Badge variant="secondary">Active</Badge> : <Badge variant="outline" className="text-muted-foreground">Inactive</Badge>}
+                        {m.active ? (
+                          <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">Active</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-muted-foreground">Inactive</Badge>
+                        )}
                       </button>
                     </TableCell>
                     <TableCell>
                       {isAdmin ? (
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => setDialog({ open: true, edit: m })} disabled={m.banned}>
-                            <Pencil />
+                          <Button variant="ghost" size="icon" onClick={() => setDialog({ open: true, edit: m })} disabled={m.banned} className="h-8 w-8">
+                            <Pencil className="size-4" />
                           </Button>
                           {m.banned ? (
-                            <Button variant="ghost" size="icon" onClick={() => setBanTarget({ member: m, action: 'unban' })}>
-                              <Undo2 className="text-primary" />
+                            <Button variant="ghost" size="icon" onClick={() => setBanTarget({ member: m, action: 'unban' })} className="h-8 w-8">
+                              <Undo2 className="size-4 text-primary" />
                             </Button>
                           ) : (
-                            <Button variant="ghost" size="icon" onClick={() => setBanTarget({ member: m, action: 'ban' })}>
-                              <Ban className="text-destructive" />
+                            <Button variant="ghost" size="icon" onClick={() => setBanTarget({ member: m, action: 'ban' })} className="h-8 w-8">
+                              <Ban className="size-4 text-destructive" />
                             </Button>
                           )}
                         </div>

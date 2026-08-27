@@ -63,23 +63,23 @@ export function ReportsTab({ monthId }: { monthId: number }) {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Member</TableHead>
-                  <TableHead className="text-right">Meals</TableHead>
-                  <TableHead className="text-right">Meal cost</TableHead>
-                  <TableHead className="text-right">Exp share</TableHead>
-                  <TableHead className="text-right">Bazar contrib</TableHead>
-                  <TableHead className="text-right">Exp contrib</TableHead>
-                  <TableHead className="text-right">Food bal</TableHead>
-                  <TableHead className="text-right">Rent cost</TableHead>
-                  <TableHead className="text-right">Rent dep</TableHead>
-                  <TableHead className="text-right">Rent bal</TableHead>
-                  <TableHead className="text-right">Net bal</TableHead>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="font-semibold">Member</TableHead>
+                  <TableHead className="text-right font-semibold">Meals</TableHead>
+                  <TableHead className="text-right font-semibold">Meal cost</TableHead>
+                  <TableHead className="text-right font-semibold">Exp share</TableHead>
+                  <TableHead className="text-right font-semibold">Bazar contrib</TableHead>
+                  <TableHead className="text-right font-semibold">Exp contrib</TableHead>
+                  <TableHead className="text-right font-semibold">Food bal</TableHead>
+                  <TableHead className="text-right font-semibold">Rent cost</TableHead>
+                  <TableHead className="text-right font-semibold">Rent dep</TableHead>
+                  <TableHead className="text-right font-semibold">Rent bal</TableHead>
+                  <TableHead className="text-right font-semibold">Net bal</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {report.members.map((m) => (
-                  <TableRow key={m.memberId}>
+                  <TableRow key={m.memberId} className="transition-colors hover:bg-muted/30">
                     <TableCell className="font-medium">{m.memberName}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatNumber(m.meals)}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatTaka(m.mealCost)}</TableCell>

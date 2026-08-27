@@ -132,20 +132,23 @@ function LedgerShell({
 function StatusBadge({ status }: { status: string }) {
   if (status === 'pending') {
     return (
-      <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+        <span className="size-1.5 rounded-full bg-yellow-500" />
         Pending
       </span>
     )
   }
   if (status === 'rejected') {
     return (
-      <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
+        <span className="size-1.5 rounded-full bg-red-500" />
         Rejected
       </span>
     )
   }
   return (
-    <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+      <span className="size-1.5 rounded-full bg-green-500" />
       Approved
     </span>
   )
@@ -225,18 +228,18 @@ export function BazarLedger({ monthId, closed, managerId }: { monthId: number; c
       ) : (
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Member</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+            <TableRow className="bg-muted/50">
+              <TableHead className="font-semibold">Date</TableHead>
+              <TableHead className="font-semibold">Member</TableHead>
+              <TableHead className="font-semibold">Description</TableHead>
+              <TableHead className="text-right font-semibold">Amount</TableHead>
+              <TableHead className="font-semibold">Status</TableHead>
+              <TableHead className="text-right font-semibold">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.map((row) => (
-              <TableRow key={row.id} className={row.status === 'pending' ? 'bg-yellow-50/50 dark:bg-yellow-950/20' : row.status === 'rejected' ? 'bg-destructive/5' : ''}>
+              <TableRow key={row.id} className={cn('transition-colors hover:bg-muted/30', row.status === 'pending' ? 'bg-yellow-50/50 dark:bg-yellow-950/20' : row.status === 'rejected' ? 'bg-destructive/5' : '')}>
                 <TableCell>{formatDate(row.bazarDate)}</TableCell>
                 <TableCell className="font-medium">{row.memberName}</TableCell>
                 <TableCell className="text-muted-foreground">{row.description || '—'}</TableCell>
@@ -412,19 +415,19 @@ export function ExpensesLedger({ monthId, closed, managerId }: { monthId: number
       ) : (
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Paid by</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+            <TableRow className="bg-muted/50">
+              <TableHead className="font-semibold">Date</TableHead>
+              <TableHead className="font-semibold">Category</TableHead>
+              <TableHead className="font-semibold">Description</TableHead>
+              <TableHead className="font-semibold">Paid by</TableHead>
+              <TableHead className="text-right font-semibold">Amount</TableHead>
+              <TableHead className="font-semibold">Status</TableHead>
+              <TableHead className="text-right font-semibold">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.map((row) => (
-              <TableRow key={row.id} className={row.status === 'pending' ? 'bg-yellow-50/50 dark:bg-yellow-950/20' : row.status === 'rejected' ? 'bg-destructive/5' : ''}>
+              <TableRow key={row.id} className={cn('transition-colors hover:bg-muted/30', row.status === 'pending' ? 'bg-yellow-50/50 dark:bg-yellow-950/20' : row.status === 'rejected' ? 'bg-destructive/5' : '')}>
                 <TableCell>{formatDate(row.expenseDate)}</TableCell>
                 <TableCell>
                   <span className="rounded bg-muted px-1.5 py-0.5 text-xs capitalize">{row.category}</span>
@@ -629,17 +632,17 @@ export function DepositsLedger({ monthId, closed, managerId }: { monthId: number
       ) : (
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Member</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+            <TableRow className="bg-muted/50">
+              <TableHead className="font-semibold">Date</TableHead>
+              <TableHead className="font-semibold">Member</TableHead>
+              <TableHead className="font-semibold">Description</TableHead>
+              <TableHead className="text-right font-semibold">Amount</TableHead>
+              <TableHead className="text-right font-semibold">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.map((row) => (
-              <TableRow key={row.id}>
+              <TableRow key={row.id} className="transition-colors hover:bg-muted/30">
                 <TableCell>{formatDate(row.depositDate)}</TableCell>
                 <TableCell className="font-medium">{row.memberName}</TableCell>
                 <TableCell className="text-muted-foreground">{row.description || '—'}</TableCell>
@@ -773,15 +776,15 @@ export function RentsLedger({ monthId, closed, managerId }: { monthId: number; c
       ) : (
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Member</TableHead>
-              <TableHead className="text-right">Rent</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+            <TableRow className="bg-muted/50">
+              <TableHead className="font-semibold">Member</TableHead>
+              <TableHead className="text-right font-semibold">Rent</TableHead>
+              <TableHead className="text-right font-semibold">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.map((row) => (
-              <TableRow key={row.id}>
+              <TableRow key={row.id} className="transition-colors hover:bg-muted/30">
                 <TableCell className="font-medium">{row.memberName}</TableCell>
                 <TableCell className="text-right tabular-nums">{formatTaka(row.amount)}</TableCell>
                 <TableCell>

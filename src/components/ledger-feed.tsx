@@ -62,36 +62,36 @@ export function LedgerFeed({ monthId }: { monthId: number }) {
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 text-xs">
         {(['bazar', 'expense', 'deposit', 'rent'] as LedgerEntryType[]).map((t) => (
-          <Badge key={t} variant="outline" className={cn('normal-case', TYPE_META[t].className)}>
+          <Badge key={t} variant="outline" className={cn('normal-case font-medium', TYPE_META[t].className)}>
             {TYPE_META[t].label} {formatTaka(totals[t])}
           </Badge>
         ))}
       </div>
-      <div className="overflow-x-auto rounded-lg border">
+      <div className="overflow-x-auto rounded-xl border shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Logged at</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Member</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Entry date</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
+            <TableRow className="bg-muted/50">
+              <TableHead className="font-semibold">Logged at</TableHead>
+              <TableHead className="font-semibold">Type</TableHead>
+              <TableHead className="font-semibold">Member</TableHead>
+              <TableHead className="font-semibold">Description</TableHead>
+              <TableHead className="font-semibold">Entry date</TableHead>
+              <TableHead className="text-right font-semibold">Amount</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.map((row: LedgerEntry) => (
-              <TableRow key={`${row.type}-${row.id}`}>
-                <TableCell className="whitespace-nowrap tabular-nums">{formatLoggedAt(row.createdAt)}</TableCell>
+              <TableRow key={`${row.type}-${row.id}`} className="transition-colors hover:bg-muted/30">
+                <TableCell className="whitespace-nowrap tabular-nums text-sm">{formatLoggedAt(row.createdAt)}</TableCell>
                 <TableCell>
-                  <span className={cn('rounded px-1.5 py-0.5 text-xs capitalize', TYPE_META[row.type].className)}>
+                  <span className={cn('rounded-md px-2 py-1 text-xs font-medium capitalize', TYPE_META[row.type].className)}>
                     {TYPE_META[row.type].label}
                   </span>
                 </TableCell>
                 <TableCell className="font-medium">{row.memberName ?? '—'}</TableCell>
                 <TableCell className="max-w-64 truncate text-muted-foreground">{row.description || (row.category ? row.category : '—')}</TableCell>
-                <TableCell className="tabular-nums">{row.entryDate ? formatDate(row.entryDate) : '—'}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatTaka(row.amount)}</TableCell>
+                <TableCell className="tabular-nums text-sm">{row.entryDate ? formatDate(row.entryDate) : '—'}</TableCell>
+                <TableCell className="text-right tabular-nums font-medium">{formatTaka(row.amount)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

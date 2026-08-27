@@ -1,6 +1,6 @@
 import { Link, createFileRoute, useLocation, useNavigate } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
-import { ArrowRight, Banknote, CalendarDays, Coins, FlaskConical, Receipt, Users, Utensils } from 'lucide-react'
+import { ArrowRight, Banknote, CalendarDays, Coins, FileText, FlaskConical, Receipt, Users, Utensils, Wallet } from 'lucide-react'
 import { z } from 'zod'
 import { useDashboard, useMonthlyReport, useMonths } from '@/api/hooks'
 import { MonthSelect } from '@/components/month-select'
@@ -59,46 +59,53 @@ function DashboardPage() {
         <StatCard
           title="Active members"
           value={dashboard?.memberCount ?? '—'}
-          icon={<Users className="size-4" />}
+          icon={<Users className="size-5" />}
+          iconBg="bg-primary/10 text-primary"
           loading={isLoading}
         />
         <StatCard
           title="Total meals"
           value={dashboard ? formatNumber(dashboard.totalMeals) : '—'}
           description="Breakfast 0.5 · lunch 1 · dinner 1"
-          icon={<Utensils className="size-4" />}
+          icon={<Utensils className="size-5" />}
+          iconBg="bg-blue-500/10 text-blue-600 dark:text-blue-400"
           loading={isLoading}
         />
         <StatCard
           title="Meal rate"
           value={dashboard ? formatTaka(dashboard.mealRate) : '—'}
           description="Total bazar ÷ total meals"
-          icon={<Coins className="size-4" />}
+          icon={<Coins className="size-5" />}
+          iconBg="bg-amber-500/10 text-amber-600 dark:text-amber-400"
           loading={isLoading}
         />
         <StatCard
           title="Total bazar"
           value={dashboard ? formatTaka(dashboard.totalBazar) : '—'}
-          icon={<Banknote className="size-4" />}
+          icon={<Banknote className="size-5" />}
+          iconBg="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
           loading={isLoading}
         />
         <StatCard
           title="Total expenses"
           value={dashboard ? formatTaka(dashboard.totalExpenses) : '—'}
-          icon={<FlaskConical className="size-4" />}
+          icon={<FlaskConical className="size-5" />}
+          iconBg="bg-destructive/10 text-destructive"
           loading={isLoading}
         />
         <StatCard
           title="Total deposits"
           value={dashboard ? formatTaka(dashboard.totalDeposits) : '—'}
-          icon={<Coins className="size-4" />}
+          icon={<Coins className="size-5" />}
+          iconBg="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
           loading={isLoading}
         />
         <StatCard
           title="Expense share / member"
           value={dashboard ? formatTaka(dashboard.expenseSharePerMember) : '—'}
           description={`Split across ${dashboard?.memberCount ?? 0} active members`}
-          icon={<Receipt className="size-4" />}
+          icon={<Receipt className="size-5" />}
+          iconBg="bg-violet-500/10 text-violet-600 dark:text-violet-400"
           loading={isLoading}
         />
         <StatCard
@@ -114,7 +121,8 @@ function DashboardPage() {
               '—'
             )
           }
-          icon={<CalendarDays className="size-4" />}
+          icon={<CalendarDays className="size-5" />}
+          iconBg="bg-muted"
           loading={isLoading}
         />
       </div>
@@ -142,9 +150,11 @@ function DashboardPage() {
                 to="/months/$monthId"
                 params={{ monthId: String(selectedId) } as any}
                 search={{ tab: 'meals' }}
-                className="flex flex-col items-center justify-center rounded-lg border bg-background p-3 text-center transition-all hover:bg-accent hover:border-primary/50"
+                className="group flex flex-col items-center justify-center rounded-xl border bg-background p-4 text-center transition-all hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm"
               >
-                <Utensils className="size-5 text-primary mb-1.5" />
+                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                  <Utensils className="size-5" />
+                </div>
                 <span className="text-xs font-medium">Meals Grid</span>
                 <span className="text-[10px] text-muted-foreground mt-0.5">Toggle daily meals</span>
               </Link>
@@ -152,41 +162,49 @@ function DashboardPage() {
                 to="/months/$monthId"
                 params={{ monthId: String(selectedId) } as any}
                 search={{ tab: 'bazar' }}
-                className="flex flex-col items-center justify-center rounded-lg border bg-background p-3 text-center transition-all hover:bg-accent hover:border-primary/50"
+                className="group flex flex-col items-center justify-center rounded-xl border bg-background p-4 text-center transition-all hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm"
               >
-                <Banknote className="size-5 text-emerald-500 mb-1.5" />
+                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition-colors group-hover:bg-emerald-500 group-hover:text-white">
+                  <Banknote className="size-5" />
+                </div>
                 <span className="text-xs font-medium">Bazar</span>
-                <span className="text-[10px] text-muted-foreground mt-0.5">Add grocery cost</span>
+                <span className="text-[10px] text-muted-foreground mt-0.5">Log shopping costs</span>
               </Link>
               <Link
                 to="/months/$monthId"
                 params={{ monthId: String(selectedId) } as any}
                 search={{ tab: 'expenses' }}
-                className="flex flex-col items-center justify-center rounded-lg border bg-background p-3 text-center transition-all hover:bg-accent hover:border-primary/50"
+                className="group flex flex-col items-center justify-center rounded-xl border bg-background p-4 text-center transition-all hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm"
               >
-                <FlaskConical className="size-5 text-amber-500 mb-1.5" />
+                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10 text-destructive transition-colors group-hover:bg-destructive group-hover:text-white">
+                  <FlaskConical className="size-5" />
+                </div>
                 <span className="text-xs font-medium">Expenses</span>
-                <span className="text-[10px] text-muted-foreground mt-0.5">Gas, electricity, etc.</span>
+                <span className="text-[10px] text-muted-foreground mt-0.5">Record extra costs</span>
               </Link>
               <Link
                 to="/months/$monthId"
                 params={{ monthId: String(selectedId) } as any}
                 search={{ tab: 'deposits' }}
-                className="flex flex-col items-center justify-center rounded-lg border bg-background p-3 text-center transition-all hover:bg-accent hover:border-primary/50"
+                className="group flex flex-col items-center justify-center rounded-xl border bg-background p-4 text-center transition-all hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm"
               >
-                <Coins className="size-5 text-blue-500 mb-1.5" />
+                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 transition-colors group-hover:bg-blue-500 group-hover:text-white">
+                  <Wallet className="size-5" />
+                </div>
                 <span className="text-xs font-medium">Deposits</span>
-                <span className="text-[10px] text-muted-foreground mt-0.5">Record payments</span>
+                <span className="text-[10px] text-muted-foreground mt-0.5">Track member deposits</span>
               </Link>
               <Link
                 to="/months/$monthId"
                 params={{ monthId: String(selectedId) } as any}
-                search={{ tab: 'rents' }}
-                className="col-span-2 sm:col-span-1 flex flex-col items-center justify-center rounded-lg border bg-background p-3 text-center transition-all hover:bg-accent hover:border-primary/50"
+                search={{ tab: 'reports' }}
+                className="group flex flex-col items-center justify-center rounded-xl border bg-background p-4 text-center transition-all hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm"
               >
-                <Receipt className="size-5 text-purple-500 mb-1.5" />
-                <span className="text-xs font-medium">Rents</span>
-                <span className="text-[10px] text-muted-foreground mt-0.5">House rent charges</span>
+                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400 transition-colors group-hover:bg-violet-500 group-hover:text-white">
+                  <FileText className="size-5" />
+                </div>
+                <span className="text-xs font-medium">Reports</span>
+                <span className="text-[10px] text-muted-foreground mt-0.5">View detailed reports</span>
               </Link>
             </div>
           </CardContent>

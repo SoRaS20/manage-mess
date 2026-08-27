@@ -103,13 +103,13 @@ function Brand({ small = false }: { small?: boolean }) {
     <>
       <span
         className={cn(
-          'flex items-center justify-center rounded-md bg-primary font-bold text-primary-foreground',
-          small ? 'size-6 text-xs' : 'size-7 text-sm',
+          'flex items-center justify-center rounded-lg bg-primary font-bold text-primary-foreground shadow-sm',
+          small ? 'size-7 text-xs' : 'size-8 text-sm',
         )}
       >
         M
       </span>
-      <span className="text-sm font-semibold">Mess Manager</span>
+      <span className="text-sm font-semibold tracking-tight">Mess Manager</span>
     </>
   )
 }
@@ -130,13 +130,13 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             key={item.label}
             to={href}
             onClick={onNavigate}
-            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            activeProps={{ className: 'bg-sidebar-accent text-sidebar-accent-foreground' }}
+            className="group flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-sm"
+            activeProps={{ className: 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm' }}
             activeOptions={{ exact: item.end }}
           >
-            <item.icon className="size-4" />
+            <item.icon className="size-4 transition-colors group-hover:text-sidebar-accent-foreground" />
             {item.label}
-        </Link>
+          </Link>
         )
       })}
     </>
@@ -150,7 +150,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-svh">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-56 flex-col border-r bg-sidebar text-sidebar-foreground md:flex">
-        <div className="flex h-14 items-center gap-2 border-b px-5">
+        <div className="flex h-14 items-center gap-2.5 border-b px-5">
           <Brand />
         </div>
         <nav className="flex-1 space-y-1 p-3">
@@ -164,7 +164,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <header className="fixed inset-x-0 top-0 z-40 flex h-12 items-center justify-between border-b bg-background px-4 md:hidden">
+      <header className="fixed inset-x-0 top-0 z-40 flex h-12 items-center justify-between border-b bg-background/80 backdrop-blur-md px-4 md:hidden">
         <Link to="/" className="flex items-center gap-2" onClick={closeMobileNav}>
           <Brand small />
         </Link>

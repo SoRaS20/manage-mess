@@ -8,6 +8,7 @@ export function StatCard({
   description,
   value,
   icon,
+  iconBg,
   loading,
   className,
 }: {
@@ -15,23 +16,28 @@ export function StatCard({
   description?: string
   value: ReactNode
   icon?: ReactNode
+  iconBg?: string
   loading?: boolean
   className?: string
 }) {
   return (
-    <Card className={cn(className)}>
+    <Card className={cn('transition-shadow hover:shadow-md', className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="space-y-1">
-          <CardDescription>{title}</CardDescription>
+          <CardDescription className="text-xs font-medium uppercase tracking-wide">{title}</CardDescription>
           {loading ? (
             <Skeleton className="h-7 w-24" />
           ) : (
             <CardTitle className="text-2xl font-semibold tabular-nums">{value}</CardTitle>
           )}
         </div>
-        {icon ? <div className="text-muted-foreground">{icon}</div> : null}
+        {icon ? (
+          <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground', iconBg)}>
+            {icon}
+          </div>
+        ) : null}
       </CardHeader>
-      {description ? <CardContent className="text-xs text-muted-foreground">{description}</CardContent> : null}
+      {description ? <CardContent className="pt-0 text-xs text-muted-foreground">{description}</CardContent> : null}
     </Card>
   )
 }

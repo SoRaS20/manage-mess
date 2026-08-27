@@ -64,32 +64,33 @@ function LoginPage() {
   }
 
   return (
-    <div className="flex h-svh w-full max-w-xl mx-auto items-center justify-center p-6 md:p-10">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <ShieldUser className="size-4" />
+    <div className="flex h-svh w-full items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-6 md:p-10">
+      <Card className="w-full max-w-sm shadow-xl">
+        <CardHeader className="space-y-1 pb-2">
+          <div className="flex justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md">
+              <ShieldUser className="size-6" />
             </div>
-            Login
-          </CardTitle>
+          </div>
+          <CardTitle className="text-center text-xl">Welcome back</CardTitle>
+          <p className="text-center text-sm text-muted-foreground">Sign in to Mess Manager</p>
         </CardHeader>
         <Separator />
-        <CardContent>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="w-full min-w-xs md:min-w-sm space-y-4">
+        <CardContent className="pt-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             {error && (
-              <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">{error}</div>
+              <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div>
             )}
 
             <Field label="Username" error={form.formState.errors.username?.message}>
-              <Input {...form.register('username')} placeholder="admin" disabled={loading} />
+              <Input {...form.register('username')} placeholder="admin" disabled={loading} className="h-11" />
             </Field>
 
             <Field label="Password" error={form.formState.errors.password?.message}>
-              <Input type="password" {...form.register('password')} placeholder="••••••••" disabled={loading} />
+              <Input type="password" {...form.register('password')} placeholder="••••••••" disabled={loading} className="h-11" />
             </Field>
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="h-11 w-full text-sm font-medium" disabled={loading}>
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Sign In
             </Button>

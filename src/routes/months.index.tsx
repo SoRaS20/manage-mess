@@ -174,22 +174,22 @@ function MonthsPage() {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Month</TableHead>
-                  <TableHead className="w-28">Status</TableHead>
-                  <TableHead className="w-48">Manager</TableHead>
-                  <TableHead className="w-56 text-right">Actions</TableHead>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="font-semibold">Month</TableHead>
+                  <TableHead className="w-28 font-semibold">Status</TableHead>
+                  <TableHead className="w-48 font-semibold">Manager</TableHead>
+                  <TableHead className="w-56 text-right font-semibold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {sorted.map((m) => (
-                  <TableRow key={m.id}>
+                  <TableRow key={m.id} className="transition-colors hover:bg-muted/30">
                     <TableCell>
-                      <Link to="/months/$monthId" params={{ monthId: String(m.id) } as any} className="font-medium hover:underline">
-                        <CalendarRange className="mr-2 inline size-3.5 text-muted-foreground" />
+                      <Link to="/months/$monthId" params={{ monthId: String(m.id) } as any} className="font-medium text-primary hover:underline">
+                        <CalendarRange className="mr-2 inline size-3.5" />
                         {monthShort(m.year, m.monthNo)}
                       </Link>
-                      <span className="text-xs text-muted-foreground"> #{m.id}</span>
+                      <span className="ml-1 text-xs text-muted-foreground">#{m.id}</span>
                     </TableCell>
                     <TableCell>
                       {m.closed ? <Badge variant="destructive">Closed</Badge> : <Badge variant="secondary">Open</Badge>}

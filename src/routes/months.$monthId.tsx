@@ -152,9 +152,10 @@ function MonthDetailPage() {
       </div>
 
       {closed ? (
-        <p className="rounded-lg border border-amber-300/50 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          This month is closed — all writes are blocked by the backend (422). Reopen it to edit records.
-        </p>
+        <div className="flex items-center gap-3 rounded-xl border border-amber-300/50 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+          <Lock className="size-4 flex-shrink-0" />
+          <p>This month is closed — all writes are blocked by the backend (422). Reopen it to edit records.</p>
+        </div>
       ) : null}
 
       <Tabs value={activeTab} onValueChange={setTab}>
