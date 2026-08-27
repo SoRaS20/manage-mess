@@ -5,6 +5,7 @@ import { LayoutDashboard, Receipt, Users, CalendarRange, LogOut, Menu, X, Histor
 import { Toaster } from '@/components/ui/sonner'
 import { useAuthStore } from '@/store/auth'
 import { ThemeProvider } from '@/providers/theme-provider'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { queryClient } from '@/lib/query'
 import { cn } from '@/lib/utils'
 import appCss from '@/index.css?url'
@@ -55,7 +56,7 @@ export const Route = createRootRoute({
 function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
         <RootDocument>
           <Outlet />
         </RootDocument>
@@ -70,7 +71,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
   if (location.pathname === '/login') {
     return (
-      <html lang="en" className="dark" suppressHydrationWarning>
+      <html lang="en" suppressHydrationWarning>
         <head>
           <HeadContent />
         </head>
@@ -83,7 +84,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
@@ -146,6 +147,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
         <div className="border-t p-4 text-xs text-muted-foreground">
           <AuthInfo />
+          <div className="mt-3 flex justify-end">
+            <ThemeToggle />
+          </div>
         </div>
       </aside>
 
@@ -153,15 +157,18 @@ function AppShell({ children }: { children: React.ReactNode }) {
         <Link to="/" className="flex items-center gap-2" onClick={closeMobileNav}>
           <Brand small />
         </Link>
-        <button
-          type="button"
-          onClick={() => setMobileNavOpen((v) => !v)}
-          className="-mr-1.5 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-          aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
-          aria-expanded={mobileNavOpen}
-        >
-          {mobileNavOpen ? <X className="size-5" /> : <Menu className="size-5" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen((v) => !v)}
+            className="-mr-1.5 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
+            aria-expanded={mobileNavOpen}
+          >
+            {mobileNavOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+          </button>
+        </div>
       </header>
 
       {mobileNavOpen && (
