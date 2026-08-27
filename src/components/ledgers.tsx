@@ -751,20 +751,17 @@ export function RentsLedger({ monthId, closed, managerId }: { monthId: number; c
   const user = useAuthStore((s) => s.user)
   const isManagerOrAdmin = user?.role === 'ADMIN' || (user?.memberId !== null && user?.memberId === managerId)
   const { data, isLoading } = useRents(monthId)
-  const { data: members } = useMembers()
   const create = useCreateRent(monthId)
   const update = useUpdateRent(monthId)
   const remove = useDeleteRent(monthId)
   const [dialog, setDialog] = useState<{ open: boolean; edit: Rent | null }>({ open: false, edit: null })
   const [deleteTarget, setDeleteTarget] = useState<Rent | null>(null)
 
-  const missingMembers = (members ?? []).filter((m) => m.active && !(data ?? []).some((r) => r.memberId === m.id))
-
   return (
     <LedgerShell
       title="Rents"
       description="Monthly rent per member (unique per member + month)."
-      addLabel={missingMembers.length ? 'Set rent' : 'Add rent'}
+      addLabel="Add rent"
       onAdd={() => setDialog({ open: true, edit: null })}
       disabled={closed || !isManagerOrAdmin}
       count={data?.length}
@@ -796,17 +793,10 @@ export function RentsLedger({ monthId, closed, managerId }: { monthId: number; c
         </Table>
       )}
 
-      {missingMembers.length > 0 && (
-        <p className="text-xs text-muted-foreground">
-          No rent set for: {missingMembers.map((m) => m.name).join(', ')}
-        </p>
-      )}
-
       <RentDialog
         monthId={monthId}
         open={dialog.open}
         edit={dialog.edit}
-        availableMembers={dialog.edit ? members ?? [] : missingMembers}
         submitting={create.isPending || update.isPending}
         onOpenChange={(v) => setDialog((d) => ({ ...d, open: v }))}
         onSubmit={async (values, existing) => {
@@ -837,7 +827,6 @@ function RentDialog({
   monthId: _monthId,
   open,
   edit,
-  availableMembers,
   submitting,
   onOpenChange,
   onSubmit,
@@ -845,7 +834,6 @@ function RentDialog({
   monthId: number
   open: boolean
   edit: Rent | null
-  availableMembers?: Member[]
   submitting: boolean
   onOpenChange: (v: boolean) => void
   onSubmit: (values: RentForm, existing: Rent | null) => Promise<void>
@@ -854,7 +842,6 @@ function RentDialog({
     resolver: zodResolver(rentSchema),
     values: edit ? { memberId: String(edit.memberId), amount: String(edit.amount) } : { memberId: '', amount: '' },
   })
-  const memberOptions = (availableMembers ?? []).map((m) => ({ value: String(m.id), label: m.name }))
   return (
     <FormDialog
       open={open}
@@ -864,18 +851,7 @@ function RentDialog({
       onSubmit={form.handleSubmit(async (v) => onSubmit(v, edit))}
     >
       <Field label="Member" error={form.formState.errors.memberId?.message}>
-        <Select items={memberOptions} value={form.watch('memberId')} onValueChange={(v) => v !== null && form.setValue('memberId', v, { shouldValidate: true })}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select member" />
-          </SelectTrigger>
-          <SelectContent>
-            {memberOptions.map((m) => (
-              <SelectItem key={m.value} value={m.value}>
-                {m.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <MemberSelectField value={form.watch('memberId')} onChange={(id) => form.setValue('memberId', id, { shouldValidate: true })} />
       </Field>
       <Field label="Rent (BDT)" error={form.formState.errors.amount?.message}>
         <Input type="number" step="0.01" min={0} {...form.register('amount')} />
