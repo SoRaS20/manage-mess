@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, Outlet, createRootRoute, redirect, useLocation, useRouter, HeadContent, Scripts } from '@tanstack/react-router'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { LayoutDashboard, Receipt, Users, CalendarRange, LogOut, Menu, X, History, ClipboardList } from 'lucide-react'
+import { LayoutDashboard, Receipt, Users, CalendarRange, LogOut, Menu, X, History, ClipboardList, User } from 'lucide-react'
 import { Toaster } from '@/components/ui/sonner'
 import { useAuthStore } from '@/store/auth'
 import { ThemeProvider } from '@/providers/theme-provider'
@@ -18,6 +18,7 @@ const navItems = [
   { to: '/members', label: 'Members', icon: Users },
   { to: '/ledger', label: 'Money log', icon: History },
   { to: '/reports', label: 'Reports', icon: Receipt },
+  { to: '/profile', label: 'Profile', icon: User },
 ]
 
 export const Route = createRootRoute({
