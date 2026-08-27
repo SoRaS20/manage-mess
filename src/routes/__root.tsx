@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Link, Outlet, createRootRoute, redirect, useLocation, useRouter, HeadContent, Scripts } from '@tanstack/react-router'
+import { createIsomorphicFn } from '@tanstack/react-start'
+import { getRequestHeader } from '@tanstack/react-start/server'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { LayoutDashboard, Receipt, Users, CalendarRange, LogOut, Menu, X, History, ClipboardList, User } from 'lucide-react'
 import { Toaster } from '@/components/ui/sonner'
@@ -10,6 +12,10 @@ import { useMonths } from '@/api/hooks'
 import { queryClient } from '@/lib/query'
 import { cn } from '@/lib/utils'
 import appCss from '@/index.css?url'
+
+const getRequestCookie = createIsomorphicFn()
+  .client(() => document.cookie)
+  .server(() => getRequestHeader('cookie') ?? '')
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -34,15 +40,26 @@ export const Route = createRootRoute({
     ],
   }),
   beforeLoad: ({ location }) => {
-    let hasToken = false
+    const requestCookie = getRequestCookie()
 
     if (typeof window !== 'undefined') {
       const { token } = useAuthStore.getState()
-      hasToken = !!token || document.cookie.includes('mess_auth_token=')
-    } else {
-      hasToken = true
+      const cookieToken = requestCookie.match(/(?:^|;\s*)mess_auth_token=([^;]*)/)?.[1]
+      const hasToken = !!token || !!cookieToken
+
+      if (!hasToken && location.pathname !== '/login') {
+        const redirectUrl = location.pathname !== '/login' ? location.pathname : '/'
+        throw redirect({
+          to: '/login',
+          search: {
+            redirect: redirectUrl,
+          },
+        })
+      }
+      return
     }
 
+    const hasToken = !!requestCookie.match(/(?:^|;\s*)mess_auth_token=([^;]*)/)?.[1]
     if (!hasToken && location.pathname !== '/login') {
       const redirectUrl = location.pathname !== '/login' ? location.pathname : '/'
       throw redirect({
