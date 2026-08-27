@@ -5,6 +5,7 @@ import { CalendarDays, Lock, LockOpen } from 'lucide-react'
 import { z } from 'zod'
 import { useCloseMonth, useMonth, useMembers, useMonthlyReport, useReopenMonth, useSetManager } from '@/api/hooks'
 import { useAuthStore } from '@/store/auth'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { MealsGrid } from '@/components/meals-grid'
 import { LedgerFeed } from '@/components/ledger-feed'
 import { BazarLedger, DepositsLedger, ExpensesLedger, RentsLedger } from '@/components/ledgers'
@@ -68,6 +69,8 @@ function MonthDetailPage() {
   const user = useAuthStore((s) => s.user)
   const isAdmin = user?.role === 'ADMIN'
 
+  const [managerConfirm, setManagerConfirm] = useState<{ memberId: number; currentManagerName: string | null } | null>(null)
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -103,7 +106,14 @@ function MonthDetailPage() {
               <Select
                 items={members?.filter((m) => m.active).map((m) => ({ value: m.id, label: m.name }))}
                 value={month.managerId ?? 0}
-                onValueChange={(v) => v !== null && setManager.mutate({ monthId: id, memberId: v })}
+                onValueChange={(v) => {
+                  if (v === null) return
+                  const currentManager = month.managerId ? members?.find((m) => m.id === month.managerId) : null
+                  setManagerConfirm({
+                    memberId: v,
+                    currentManagerName: currentManager?.name ?? null,
+                  })
+                }}
                 disabled={closed || !isAdmin}
               >
                 <SelectTrigger size="sm" className="h-6 min-w-28 px-2 text-xs">
@@ -179,6 +189,26 @@ function MonthDetailPage() {
           <ReportsTab monthId={id} />
         </TabsContent>
       </Tabs>
+
+      <ConfirmDialog
+        open={managerConfirm !== null}
+        onOpenChange={(v) => !v && setManagerConfirm(null)}
+        title={managerConfirm?.currentManagerName ? 'Change Manager' : 'Assign Manager'}
+        description={
+          managerConfirm
+            ? managerConfirm.currentManagerName
+              ? `Change manager for ${monthLabel(month.year, month.monthNo)} from ${managerConfirm.currentManagerName} to ${members?.find((m) => m.id === managerConfirm.memberId)?.name}?`
+              : `Assign ${members?.find((m) => m.id === managerConfirm.memberId)?.name} as manager for ${monthLabel(month.year, month.monthNo)}?`
+            : undefined
+        }
+        confirmLabel="Confirm"
+        submitting={setManager.isPending}
+        onConfirm={async () => {
+          if (!managerConfirm) return
+          await setManager.mutateAsync({ monthId: id, memberId: managerConfirm.memberId })
+          setManagerConfirm(null)
+        }}
+      />
     </div>
   )
 }
