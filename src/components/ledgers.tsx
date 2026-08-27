@@ -132,23 +132,23 @@ function LedgerShell({
 function StatusBadge({ status }: { status: string }) {
   if (status === 'pending') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
-        <span className="size-1.5 rounded-full bg-yellow-500" />
+      <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+        <span className="size-1 rounded-full bg-yellow-500" />
         Pending
       </span>
     )
   }
   if (status === 'rejected') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
-        <span className="size-1.5 rounded-full bg-red-500" />
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
+        <span className="size-1 rounded-full bg-red-500" />
         Rejected
       </span>
     )
   }
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
-      <span className="size-1.5 rounded-full bg-green-500" />
+    <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+      <span className="size-1 rounded-full bg-green-500" />
       Approved
     </span>
   )

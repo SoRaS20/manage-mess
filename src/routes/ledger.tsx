@@ -4,15 +4,8 @@ import { Clock } from 'lucide-react'
 import { z } from 'zod'
 import { useMonths } from '@/api/hooks'
 import { LedgerFeed } from '@/components/ledger-feed'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { MonthSelect } from '@/components/month-select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { monthLabel } from '@/lib/format'
 
 const ledgerSearchSchema = z.object({
   monthId: z.coerce.number().optional(),
@@ -52,22 +45,13 @@ function LedgerPage() {
             <p className="text-sm text-muted-foreground">All bazar, expense, deposit and rent entries with timestamps.</p>
           </div>
         </div>
-        <Select
-          items={months?.map((m) => ({ value: m.id, label: monthLabel(m.year, m.monthNo) }))}
-          value={activeMonth ?? 0}
-          onValueChange={(v) => v !== null && navigate({ search: { monthId: v } } as any)}
-        >
-          <SelectTrigger size="sm" className="w-48">
-            <SelectValue placeholder="Select month" />
-          </SelectTrigger>
-          <SelectContent>
-            {months?.map((m) => (
-              <SelectItem key={m.id} value={m.id}>
-                {monthLabel(m.year, m.monthNo)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <MonthSelect
+          months={months}
+          value={activeMonth}
+          onChange={(id) => navigate({ search: { monthId: id } } as any)}
+          loading={isLoading}
+          className="w-52"
+        />
       </div>
 
       {activeMonth ? <LedgerFeed monthId={activeMonth} /> : <p className="py-12 text-center text-sm text-muted-foreground">No month selected.</p>}

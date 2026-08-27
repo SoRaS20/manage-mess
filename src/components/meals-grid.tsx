@@ -261,12 +261,12 @@ export function MealsGrid({
                                   {(['breakfast', 'lunch', 'dinner'] as MealSlot[]).map((slot) => slotBadge(meal[`${slot}Count`], slot, canEdit && meal.status !== 'rejected', meal))}
                                 </div>
                                 {meal.status === 'pending' && isManagerOrAdmin && !closed ? (
-                                  <div className="flex items-center gap-1 rounded-full border bg-background px-1 shadow-sm">
-                                    <Button type="button" variant="ghost" size="icon" className="size-5 rounded-full text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700" onClick={(e) => handleApprove(e, meal)} title="Approve">
-                                      <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                  <div className="flex items-center gap-0.5 rounded-full border bg-background px-1 py-0.5 shadow-sm">
+                                    <Button type="button" variant="ghost" size="icon" className="size-6 rounded-full text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700" onClick={(e) => handleApprove(e, meal)} title="Approve">
+                                      <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                                     </Button>
-                                    <Button type="button" variant="ghost" size="icon" className="size-5 rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={(e) => handleReject(e, meal)} title="Reject">
-                                      <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    <Button type="button" variant="ghost" size="icon" className="size-6 rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={(e) => handleReject(e, meal)} title="Reject">
+                                      <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                                     </Button>
                                   </div>
                                 ) : meal.status === 'rejected' ? (
@@ -274,7 +274,7 @@ export function MealsGrid({
                                 ) : null}
                               </div>
                             ) : (
-                              <span className={cn('flex size-7 items-center justify-center rounded-full border border-dashed text-muted-foreground/40 transition-all', canEdit && 'group-hover:border-primary/40 group-hover:bg-primary/5 group-hover:text-primary')}>
+                              <span className={cn('flex size-8 items-center justify-center rounded-full border-2 border-dashed text-muted-foreground/50 transition-all', canEdit && 'group-hover:border-primary/50 group-hover:bg-primary/5 group-hover:text-primary')}>
                                 +
                               </span>
                             )}

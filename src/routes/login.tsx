@@ -55,16 +55,17 @@ function LoginPage() {
       const res = await loginServerFn({ data: values })
       setAuth(res.token, res.user)
       const targetPath = !searchRedirect || searchRedirect === '/login' ? '/' : searchRedirect
-      navigate({ to: targetPath as any })
-    } catch (err: any) {
-      setError(err.message || 'Login failed')
+      navigate({ to: targetPath as `/` })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Login failed'
+      setError(message)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="flex h-svh w-full items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-6 md:p-10">
+    <div className="flex h-svh w-full items-center justify-center bg-linear-to-br from-primary/5 via-background to-primary/10 p-6 md:p-10">
       <Card className="w-full max-w-sm shadow-xl">
         <CardHeader className="space-y-1 pb-2">
           <div className="flex justify-center">

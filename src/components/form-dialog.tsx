@@ -9,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 export function FormDialog({
@@ -80,8 +79,4 @@ export function Field({
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
   )
-}
-
-export function TextInput(props: React.ComponentProps<typeof Input>) {
-  return <Input {...props} />
 }

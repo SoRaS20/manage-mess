@@ -20,7 +20,7 @@ export const getMonth = createServerFn({ method: 'GET' as const })
       .from(months)
       .where(eq(months.id, data.id))
       .limit(1)
-    return row ?? null
+    return row
   })
 
 export const createMonth = createServerFn({ method: 'POST' as const })
@@ -46,24 +46,24 @@ export const updateMonth = createServerFn({ method: 'POST' as const })
     const { id, ...fields } = data
     if (Object.keys(fields).length === 0) {
       const [row] = await db.select().from(months).where(eq(months.id, id)).limit(1)
-      return row ?? null
+      return row
     }
     const [updated] = await db.update(months).set(fields).where(eq(months.id, id)).returning()
-    return updated ?? null
+    return updated
   })
 
 export const closeMonth = createServerFn({ method: 'POST' as const })
   .validator((data: { id: number }) => data)
   .handler(async ({ data }) => {
     const [updated] = await db.update(months).set({ closed: true }).where(eq(months.id, data.id)).returning()
-    return updated ?? null
+    return updated
   })
 
 export const reopenMonth = createServerFn({ method: 'POST' as const })
   .validator((data: { id: number }) => data)
   .handler(async ({ data }) => {
     const [updated] = await db.update(months).set({ closed: false }).where(eq(months.id, data.id)).returning()
-    return updated ?? null
+    return updated
   })
 
 export const setManager = createServerFn({ method: 'POST' as const })

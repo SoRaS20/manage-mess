@@ -152,7 +152,7 @@ function MonthDetailPage() {
       </div>
 
       {closed ? (
-        <div className="flex items-center gap-3 rounded-xl border border-amber-300/50 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+        <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800/40 dark:bg-amber-950/50 dark:text-amber-300">
           <Lock className="size-4 flex-shrink-0" />
           <p>This month is closed — all writes are blocked by the backend (422). Reopen it to edit records.</p>
         </div>

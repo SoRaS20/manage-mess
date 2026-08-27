@@ -210,25 +210,27 @@ function MembersPage() {
                     <TableCell className="text-muted-foreground">{m.phone || '—'}</TableCell>
                     <TableCell className="text-sm">{formatDate(m.joinDate)}</TableCell>
                     <TableCell>
-                      <button
-                        onClick={() => toggleActive.mutate(m.id)}
-                        disabled={toggleActive.isPending || !isAdmin || m.banned}
-                        title={m.active ? 'Deactivate' : 'Activate'}
-                        className="flex items-center gap-2 text-xs font-medium disabled:opacity-50"
-                      >
-                        <span
-                          className={cn('relative inline-flex h-5 w-9 items-center rounded-full transition-colors', m.active ? 'bg-primary' : 'bg-input')}
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => toggleActive.mutate(m.id)}
+                          disabled={toggleActive.isPending || !isAdmin || m.banned}
+                          title={m.active ? 'Deactivate' : 'Activate'}
+                          className="flex-shrink-0 disabled:opacity-50"
                         >
                           <span
-                            className={cn('inline-block size-3.5 rounded-full bg-white shadow-sm transition-transform', m.active ? 'translate-x-4' : 'translate-x-0.5')}
-                          />
-                        </span>
+                            className={cn('relative inline-flex h-5 w-9 items-center rounded-full transition-colors', m.active ? 'bg-primary' : 'bg-input')}
+                          >
+                            <span
+                              className={cn('inline-block size-3.5 rounded-full bg-white shadow-sm transition-transform', m.active ? 'translate-x-4' : 'translate-x-0.5')}
+                            />
+                          </span>
+                        </button>
                         {m.active ? (
                           <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">Active</Badge>
                         ) : (
                           <Badge variant="outline" className="text-muted-foreground">Inactive</Badge>
                         )}
-                      </button>
+                      </div>
                     </TableCell>
                     <TableCell>
                       {isAdmin ? (

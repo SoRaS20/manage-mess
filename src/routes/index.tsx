@@ -145,66 +145,51 @@ function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-3 lg:grid-cols-5">
               <Link
                 to="/months/$monthId"
                 params={{ monthId: String(selectedId) } as any}
                 search={{ tab: 'meals' }}
-                className="group flex flex-col items-center justify-center rounded-xl border bg-background p-4 text-center transition-all hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm"
+                className="group flex flex-col items-center rounded-lg border bg-background px-2 py-3 text-center transition-all hover:border-primary/30 hover:bg-primary/5"
               >
-                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                  <Utensils className="size-5" />
-                </div>
-                <span className="text-xs font-medium">Meals Grid</span>
-                <span className="text-[10px] text-muted-foreground mt-0.5">Toggle daily meals</span>
+                <Utensils className="mb-1.5 size-4 text-primary transition-colors group-hover:text-primary" />
+                <span className="text-xs font-medium leading-tight">Meals</span>
               </Link>
               <Link
                 to="/months/$monthId"
                 params={{ monthId: String(selectedId) } as any}
                 search={{ tab: 'bazar' }}
-                className="group flex flex-col items-center justify-center rounded-xl border bg-background p-4 text-center transition-all hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm"
+                className="group flex flex-col items-center rounded-lg border bg-background px-2 py-3 text-center transition-all hover:border-primary/30 hover:bg-primary/5"
               >
-                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition-colors group-hover:bg-emerald-500 group-hover:text-white">
-                  <Banknote className="size-5" />
-                </div>
-                <span className="text-xs font-medium">Bazar</span>
-                <span className="text-[10px] text-muted-foreground mt-0.5">Log shopping costs</span>
+                <Banknote className="mb-1.5 size-4 text-emerald-600 dark:text-emerald-400 transition-colors" />
+                <span className="text-xs font-medium leading-tight">Bazar</span>
               </Link>
               <Link
                 to="/months/$monthId"
                 params={{ monthId: String(selectedId) } as any}
                 search={{ tab: 'expenses' }}
-                className="group flex flex-col items-center justify-center rounded-xl border bg-background p-4 text-center transition-all hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm"
+                className="group flex flex-col items-center rounded-lg border bg-background px-2 py-3 text-center transition-all hover:border-primary/30 hover:bg-primary/5"
               >
-                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10 text-destructive transition-colors group-hover:bg-destructive group-hover:text-white">
-                  <FlaskConical className="size-5" />
-                </div>
-                <span className="text-xs font-medium">Expenses</span>
-                <span className="text-[10px] text-muted-foreground mt-0.5">Record extra costs</span>
+                <FlaskConical className="mb-1.5 size-4 text-destructive transition-colors" />
+                <span className="text-xs font-medium leading-tight">Expenses</span>
               </Link>
               <Link
                 to="/months/$monthId"
                 params={{ monthId: String(selectedId) } as any}
                 search={{ tab: 'deposits' }}
-                className="group flex flex-col items-center justify-center rounded-xl border bg-background p-4 text-center transition-all hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm"
+                className="group flex flex-col items-center rounded-lg border bg-background px-2 py-3 text-center transition-all hover:border-primary/30 hover:bg-primary/5"
               >
-                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 transition-colors group-hover:bg-blue-500 group-hover:text-white">
-                  <Wallet className="size-5" />
-                </div>
-                <span className="text-xs font-medium">Deposits</span>
-                <span className="text-[10px] text-muted-foreground mt-0.5">Track member deposits</span>
+                <Wallet className="mb-1.5 size-4 text-blue-600 dark:text-blue-400 transition-colors" />
+                <span className="text-xs font-medium leading-tight">Deposits</span>
               </Link>
               <Link
                 to="/months/$monthId"
                 params={{ monthId: String(selectedId) } as any}
                 search={{ tab: 'reports' }}
-                className="group flex flex-col items-center justify-center rounded-xl border bg-background p-4 text-center transition-all hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm"
+                className="group flex flex-col items-center rounded-lg border bg-background px-2 py-3 text-center transition-all hover:border-primary/30 hover:bg-primary/5"
               >
-                <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400 transition-colors group-hover:bg-violet-500 group-hover:text-white">
-                  <FileText className="size-5" />
-                </div>
-                <span className="text-xs font-medium">Reports</span>
-                <span className="text-[10px] text-muted-foreground mt-0.5">View detailed reports</span>
+                <FileText className="mb-1.5 size-4 text-violet-600 dark:text-violet-400 transition-colors" />
+                <span className="text-xs font-medium leading-tight">Reports</span>
               </Link>
             </div>
           </CardContent>

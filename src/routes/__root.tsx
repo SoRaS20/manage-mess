@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, Outlet, createRootRoute, redirect, useLocation, useRouter, HeadContent, Scripts } from '@tanstack/react-router'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { LayoutDashboard, Receipt, Users, CalendarRange, LogOut, Menu, X, History, CalendarDays, ClipboardList } from 'lucide-react'
+import { LayoutDashboard, Receipt, Users, CalendarRange, LogOut, Menu, X, History, ClipboardList } from 'lucide-react'
 import { Toaster } from '@/components/ui/sonner'
 import { useAuthStore } from '@/store/auth'
 import { ThemeProvider } from '@/providers/theme-provider'
@@ -156,9 +156,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
         <nav className="flex-1 space-y-1 p-3">
           <NavLinks />
         </nav>
-        <div className="border-t p-4 text-xs text-muted-foreground">
+        <div className="border-t p-4">
           <AuthInfo />
-          <div className="mt-3 flex justify-end">
+          <div className="mt-3 flex items-center justify-between rounded-lg bg-muted/50 px-2 py-1.5">
+            <span className="text-xs text-muted-foreground">Theme</span>
             <ThemeToggle />
           </div>
         </div>

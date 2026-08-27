@@ -18,7 +18,7 @@ export async function assertMonthOpen(monthId: number): Promise<void> {
 
 export async function getMonthById(monthId: number) {
   const [row] = await db.select().from(months).where(eq(months.id, monthId)).limit(1)
-  return row ?? null
+  return row
 }
 
 export function eachDayOfMonth(year: number, monthNo: number): string[] {

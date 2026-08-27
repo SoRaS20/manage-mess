@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 import { loginServerFn } from '@/server/auth'
 import { listMembers, createMember, updateMember, toggleMemberActive, deleteMember } from '@/server/members'
 import { listMonths, getMonth, createMonth, updateMonth, closeMonth, reopenMonth, setManager, deleteMonth } from '@/server/months'
-import { getMealsByMonth, createMeal, toggleMeal, updateMeal, deleteMeal, generateMeals, approveMeal, rejectMeal, updateMealSlot } from '@/server/meals'
+import { getMealsByMonth, createMeal, deleteMeal, approveMeal, rejectMeal, updateMealSlot } from '@/server/meals'
 import { listBazarByMonth, createBazar, updateBazar, deleteBazar, approveBazar, rejectBazar } from '@/server/bazar'
 import { listExpensesByMonth, createExpense, updateExpense, deleteExpense, approveExpense, rejectExpense } from '@/server/expenses'
 import { listDepositsByMonth, createDeposit, updateDeposit, deleteDeposit } from '@/server/deposits'
@@ -150,48 +150,6 @@ function useApiMutation(options: { success: string; invalidate: () => void }) {
   }
 }
 
-export function useGenerateMeals(monthId: number) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: () => generateMeals({ data: { monthId } }),
-    onSuccess: (res) => {
-      toast.success(`Generated ${res.created} meal rows`)
-      invalidateMealForMonth(queryClient, monthId)
-    },
-    onError: (error: Error) => toast.error(error.message),
-  })
-}
-
-export function useToggleMeal(monthId: number) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ mealId, slot, on, status }: { mealId: number; slot: 'breakfast' | 'lunch' | 'dinner'; on: boolean; status?: string }) =>
-      toggleMeal({ data: { mealId, slot, on, status } }),
-    onMutate: async ({ mealId, slot, on }) => {
-      await queryClient.cancelQueries({ queryKey: qk.meals(monthId) })
-      const prev = queryClient.getQueryData<Meal[]>(qk.meals(monthId))
-      queryClient.setQueryData<Meal[]>(qk.meals(monthId), (old) =>
-        old?.map((m) => {
-          if (m.id !== mealId) return m
-          const field = slot === 'breakfast' ? 'breakfastCount' : slot === 'lunch' ? 'lunchCount' : 'dinnerCount'
-          const currentCount = m[field]
-          const newCount = on ? Math.max(currentCount, 1) : 0
-          const updated = { ...m, [field]: newCount }
-          return { ...updated, dailyCount: updated.breakfastCount * 0.5 + updated.lunchCount * 1.0 + updated.dinnerCount * 1.0 }
-        })
-      )
-      return { prev }
-    },
-    onError: (error, _vars, context) => {
-      if (context?.prev) queryClient.setQueryData(qk.meals(monthId), context.prev)
-      toast.error(error.message)
-    },
-    onSettled: () => {
-      invalidateMealForMonth(queryClient, monthId)
-    },
-  })
-}
-
 export function useUpdateMealSlot(monthId: number) {
   const queryClient = useQueryClient()
   return useMutation({
@@ -226,19 +184,6 @@ export function useCreateMeal(monthId: number) {
     mutationFn: (data: import('./types').MealPayload & { status?: string }) =>
       createMeal({ data: { memberId: data.member.id, monthId: data.month.id, recordDate: data.recordDate, breakfastCount: data.breakfastCount, lunchCount: data.lunchCount, dinnerCount: data.dinnerCount, status: data.status } }),
     onSuccess: () => {
-      invalidateMealForMonth(queryClient, monthId)
-    },
-    onError: (error: Error) => toast.error(error.message),
-  })
-}
-
-export function useUpdateMeal(monthId: number) {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ mealId, flags }: { mealId: number; flags: { breakfastCount?: number; lunchCount?: number; dinnerCount?: number } }) =>
-      updateMeal({ data: { mealId, ...flags } }),
-    onSuccess: () => {
-      toast.success('Meal updated')
       invalidateMealForMonth(queryClient, monthId)
     },
     onError: (error: Error) => toast.error(error.message),
