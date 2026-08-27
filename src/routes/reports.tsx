@@ -21,8 +21,9 @@ function ReportsPage() {
   const navigate = useNavigate()
   const { data: months, isLoading } = useMonths()
 
-  const active = months?.find((m) => !m.closed) ?? months?.[0]
-  const selectedId = monthId ?? active?.id
+  const now = new Date()
+  const currentMonth = months?.find((m) => m.year === now.getFullYear() && m.monthNo === now.getMonth() + 1)
+  const selectedId = monthId ?? currentMonth?.id ?? months?.[0]?.id
 
   return (
     <div className="space-y-6">

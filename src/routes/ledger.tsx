@@ -38,7 +38,9 @@ function LedgerPage() {
     )
   }
 
-  const activeMonth = monthId ?? months?.[0]?.id
+  const now = new Date()
+  const currentMonth = months?.find((m) => m.year === now.getFullYear() && m.monthNo === now.getMonth() + 1)
+  const activeMonth = monthId ?? currentMonth?.id ?? months?.[0]?.id
 
   return (
     <div className="space-y-6">
