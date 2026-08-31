@@ -134,15 +134,14 @@ function Brand({ small = false }: { small?: boolean }) {
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const { data: months } = useMonths()
-  const now = new Date()
-  const currentMonth = months?.find(
-    (m) => m.year === now.getFullYear() && m.monthNo === now.getMonth() + 1,
-  )
+  const openMonth = months
+    ?.filter((m) => !m.closed)
+    ?.sort((a, b) => b.year - a.year || b.monthNo - a.monthNo)?.[0]
 
   return (
     <>
       {navItems.map((item) => {
-        const href = item.dynamic && currentMonth ? `/months/${currentMonth.id}` : item.to
+        const href = item.dynamic && openMonth ? `/months/${openMonth.id}` : item.to
         return (
           <Link
             key={item.label}
