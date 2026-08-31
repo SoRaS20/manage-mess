@@ -36,3 +36,12 @@ export function eachDayOfMonth(year: number, monthNo: number): string[] {
 }
 
 export const SLOTS = ['breakfast', 'lunch', 'dinner'] as const
+
+export function isPastDateStr(dateStr: string): boolean {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  date.setHours(0, 0, 0, 0)
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  return date < today
+}

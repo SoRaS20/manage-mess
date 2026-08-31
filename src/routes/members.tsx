@@ -208,7 +208,12 @@ function MembersPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{m.phone || '—'}</TableCell>
-                    <TableCell className="text-sm">{formatDate(m.joinDate)}</TableCell>
+                    <TableCell>
+                      <div className="text-sm">{formatDate(m.joinDate)}</div>
+                      {m.createdAt && (
+                        <div className="text-[10px] text-muted-foreground">Created {new Date(m.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <button

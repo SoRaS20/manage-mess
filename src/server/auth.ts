@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { eq, and, gt, lt, desc, ne } from 'drizzle-orm'
+import { eq, and, gt, lt, desc, ne, isNull } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
 import { db } from '../db'
 import { users, members, sessions } from '../db/schema'
@@ -102,7 +102,7 @@ export const loginServerFn = createServerFn({ method: 'POST' as const })
       throw new Error('Username and password required')
     }
 
-    const [user] = await db.select().from(users).where(eq(users.username, data.username)).limit(1)
+    const [user] = await db.select().from(users).where(and(eq(users.username, data.username), isNull(users.deletedAt))).limit(1)
     if (!user) throw new Error('Invalid credentials')
 
     const valid = await bcrypt.compare(data.password, user.password)
@@ -111,7 +111,7 @@ export const loginServerFn = createServerFn({ method: 'POST' as const })
     const [member] = await db
       .select({ id: members.id })
       .from(members)
-      .where(eq(members.userId, user.id))
+      .where(and(eq(members.userId, user.id), isNull(members.deletedAt)))
       .limit(1)
 
     const memberId = member?.id ?? null
@@ -150,7 +150,7 @@ export const changePasswordServerFn = createServerFn({ method: 'POST' as const }
     if (!valid) throw new Error('Current password is incorrect')
 
     const hash = await bcrypt.hash(data.newPassword, 10)
-    await db.update(users).set({ password: hash }).where(eq(users.id, authUser.id))
+    await db.update(users).set({ password: hash, updatedBy: authUser.id }).where(eq(users.id, authUser.id))
 
     // Revoke all other sessions (keep current one)
     const currentSession = await db

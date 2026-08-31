@@ -13,12 +13,22 @@ import { relations } from 'drizzle-orm'
 
 type EntryStatus = 'pending' | 'approved' | 'rejected'
 
+const auditFields = {
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').$onUpdateFn(() => new Date()),
+  createdBy: integer('created_by'),
+  updatedBy: integer('updated_by'),
+  deletedAt: timestamp('deleted_at'),
+  deletedBy: integer('deleted_by'),
+}
+
 // ── Users ──────────────────────────────────────────────
 export const users = pgTable('app_user', {
   id: serial('id').primaryKey(),
   username: varchar('username', { length: 50 }).notNull().unique(),
   password: varchar('user_password', { length: 255 }).notNull(),
   role: varchar('role', { length: 10 }).notNull().default('MEMBER'),
+  ...auditFields,
 })
 
 // ── Sessions ───────────────────────────────────────────
@@ -44,6 +54,7 @@ export const members = pgTable('member', {
   active: boolean('active').notNull().default(true),
   banned: boolean('banned').notNull().default(false),
   userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
+  ...auditFields,
 })
 
 // ── Months ─────────────────────────────────────────────
@@ -55,6 +66,7 @@ export const months = pgTable(
     monthNo: integer('month_no').notNull(),
     closed: boolean('closed').notNull().default(false),
     managerId: integer('manager_id').references(() => members.id, { onDelete: 'set null' }),
+    ...auditFields,
   },
   (t) => [uniqueIndex('mess_month_year_month_no_idx').on(t.year, t.monthNo)],
 )
@@ -77,6 +89,7 @@ export const meals = pgTable(
     status: varchar('status', { length: 10 }).notNull().default('approved'),
     approvedBy: integer('approved_by').references(() => members.id, { onDelete: 'set null' }),
     approvedAt: timestamp('approved_at'),
+    ...auditFields,
   },
   (t) => [uniqueIndex('meal_member_date_idx').on(t.memberId, t.recordDate)],
 )
@@ -93,10 +106,10 @@ export const bazar = pgTable('bazar', {
   amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
   description: varchar('description', { length: 255 }),
   bazarDate: date('bazar_date').notNull().defaultNow(),
-  createdAt: timestamp('date_created').notNull().defaultNow(),
   status: varchar('status', { length: 10 }).notNull().default('approved'),
   approvedBy: integer('approved_by').references(() => members.id, { onDelete: 'set null' }),
   approvedAt: timestamp('approved_at'),
+  ...auditFields,
 })
 
 // ── Expenses ───────────────────────────────────────────
@@ -110,10 +123,10 @@ export const expenses = pgTable('expense', {
   category: varchar('category', { length: 20 }).notNull(),
   expenseDate: date('expense_date').notNull().defaultNow(),
   paidById: integer('paid_by_id').references(() => members.id, { onDelete: 'set null' }),
-  createdAt: timestamp('date_created').notNull().defaultNow(),
   status: varchar('status', { length: 10 }).notNull().default('approved'),
   approvedBy: integer('approved_by').references(() => members.id, { onDelete: 'set null' }),
   approvedAt: timestamp('approved_at'),
+  ...auditFields,
 })
 
 // ── Deposits ───────────────────────────────────────────
@@ -128,7 +141,7 @@ export const deposits = pgTable('deposit', {
   amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
   depositDate: date('deposit_date').notNull().defaultNow(),
   description: varchar('description', { length: 255 }),
-  createdAt: timestamp('date_created').notNull().defaultNow(),
+  ...auditFields,
 })
 
 // ── Rents ──────────────────────────────────────────────
@@ -143,7 +156,7 @@ export const rents = pgTable(
       .notNull()
       .references(() => months.id, { onDelete: 'cascade' }),
     amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
-    createdAt: timestamp('date_created').notNull().defaultNow(),
+    ...auditFields,
   },
   (t) => [uniqueIndex('rent_member_month_idx').on(t.memberId, t.monthId)],
 )

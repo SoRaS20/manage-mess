@@ -7,6 +7,10 @@ export type Member = {
   banned: boolean
   userId: number | null
   user: { id: number; username: string; role: string } | null
+  createdAt: string
+  updatedAt: string | null
+  createdBy: number | null
+  updatedBy: number | null
 }
 
 export type Month = {
@@ -17,6 +21,10 @@ export type Month = {
   managerId: number | null
   managerName?: string | null
   manager?: { id: number; name: string } | null
+  createdAt: string
+  updatedAt: string | null
+  createdBy: number | null
+  updatedBy: number | null
 }
 
 export type MealSlot = 'breakfast' | 'lunch' | 'dinner'
@@ -36,6 +44,10 @@ export type Meal = {
   status: EntryStatus
   approvedBy: number | null
   approvedAt: string | null
+  createdAt: string
+  updatedAt: string | null
+  createdBy: number | null
+  updatedBy: number | null
 }
 
 export type Bazar = {
@@ -46,10 +58,13 @@ export type Bazar = {
   amount: number
   description: string | null
   bazarDate: string
-  createdAt: string
   status: EntryStatus
   approvedBy: number | null
   approvedAt: string | null
+  createdAt: string
+  updatedAt: string | null
+  createdBy: number | null
+  updatedBy: number | null
 }
 
 export type ExpenseCategory = 'gas' | 'electricity' | 'water' | 'internet' | 'other'
@@ -63,10 +78,13 @@ export type Expense = {
   expenseDate: string
   paidById: number | null
   paidByName: string | null
-  createdAt: string
   status: EntryStatus
   approvedBy: number | null
   approvedAt: string | null
+  createdAt: string
+  updatedAt: string | null
+  createdBy: number | null
+  updatedBy: number | null
 }
 
 export type Deposit = {
@@ -78,6 +96,9 @@ export type Deposit = {
   depositDate: string
   description: string | null
   createdAt: string
+  updatedAt: string | null
+  createdBy: number | null
+  updatedBy: number | null
 }
 
 export type Rent = {
@@ -87,6 +108,9 @@ export type Rent = {
   monthId: number
   amount: number
   createdAt: string
+  updatedAt: string | null
+  createdBy: number | null
+  updatedBy: number | null
 }
 
 export type LedgerEntryType = 'bazar' | 'expense' | 'deposit' | 'rent'
@@ -100,7 +124,11 @@ export type LedgerEntry = {
   description?: string | null
   category?: string
   entryDate?: string | null
+  status?: EntryStatus | null
   createdAt?: string | null
+  updatedAt?: string | null
+  createdBy?: number | null
+  updatedBy?: number | null
 }
 
 export type DashboardSummary = {

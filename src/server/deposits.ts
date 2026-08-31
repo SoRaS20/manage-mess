@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { eq, asc } from 'drizzle-orm'
+import { eq, asc, isNull } from 'drizzle-orm'
 import { db } from '../db'
 import { deposits } from '../db/schema'
 import { assertMonthOpen } from './utils'
@@ -8,7 +8,7 @@ export const listDepositsByMonth = createServerFn({ method: 'GET' as const })
   .validator((data: { monthId: number }) => data)
   .handler(async ({ data }) => {
     const rows = await db.query.deposits.findMany({
-      where: eq(deposits.monthId, data.monthId),
+      where: (t, { and }) => and(eq(t.monthId, data.monthId), isNull(t.deletedAt)),
       orderBy: [asc(deposits.depositDate)],
       with: { member: { columns: { id: true, name: true } } },
     })
@@ -21,6 +21,9 @@ export const listDepositsByMonth = createServerFn({ method: 'GET' as const })
       depositDate: r.depositDate,
       description: r.description,
       createdAt: r.createdAt?.toISOString(),
+      updatedAt: r.updatedAt?.toISOString() ?? null,
+      createdBy: r.createdBy,
+      updatedBy: r.updatedBy,
     }))
   })
 
@@ -32,6 +35,7 @@ export const createDeposit = createServerFn({ method: 'POST' as const })
       amount: number
       depositDate: string
       description?: string
+      userId?: number
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -44,6 +48,7 @@ export const createDeposit = createServerFn({ method: 'POST' as const })
         amount: String(data.amount),
         depositDate: data.depositDate,
         description: data.description || null,
+        createdBy: data.userId ?? null,
       })
       .returning()
     return created
@@ -57,10 +62,11 @@ export const updateDeposit = createServerFn({ method: 'POST' as const })
       amount?: number
       depositDate?: string
       description?: string
+      userId?: number
     }) => data,
   )
   .handler(async ({ data }) => {
-    const { id, ...fields } = data
+    const { id, userId, ...fields } = data
     const [existing] = await db.select().from(deposits).where(eq(deposits.id, id)).limit(1)
     if (!existing) throw new Error('Deposit not found')
     await assertMonthOpen(existing.monthId)
@@ -70,16 +76,17 @@ export const updateDeposit = createServerFn({ method: 'POST' as const })
     if (fields.amount !== undefined) updateData.amount = String(fields.amount)
     if (fields.depositDate !== undefined) updateData.depositDate = fields.depositDate
     if (fields.description !== undefined) updateData.description = fields.description || null
+    updateData.updatedBy = userId ?? null
 
     const [updated] = await db.update(deposits).set(updateData).where(eq(deposits.id, id)).returning()
     return updated
   })
 
 export const deleteDeposit = createServerFn({ method: 'POST' as const })
-  .validator((data: { id: number }) => data)
+  .validator((data: { id: number; userId?: number }) => data)
   .handler(async ({ data }) => {
     const [existing] = await db.select().from(deposits).where(eq(deposits.id, data.id)).limit(1)
     if (existing) await assertMonthOpen(existing.monthId)
-    await db.delete(deposits).where(eq(deposits.id, data.id))
+    await db.update(deposits).set({ deletedAt: new Date(), deletedBy: data.userId ?? null }).where(eq(deposits.id, data.id))
     return { success: true }
   })

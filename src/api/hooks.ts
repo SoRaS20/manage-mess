@@ -11,6 +11,7 @@ import { listRentsByMonth, createRent, updateRent, deleteRent } from '@/server/r
 import { getDashboardSummary } from '@/server/dashboard'
 import { getLedgerByMonth } from '@/server/ledger'
 import { getMonthlyReport, getDailyReport, getMemberReport } from '@/server/reports'
+import { useAuthStore } from '@/store/auth'
 
 import type {
   BazarPayload,
@@ -62,6 +63,14 @@ const invalidateMoneyForMonth = (queryClient: AppQueryClient, monthId: number, c
     qk.ledger(monthId),
     qk.reports(monthId),
   ])
+}
+
+function useUserId(): number | undefined {
+  return useAuthStore((s) => s.user?.id) ?? undefined
+}
+
+function useUserRole(): string | undefined {
+  return useAuthStore((s) => s.user?.role) ?? undefined
 }
 
 // ── Auth ───────────────────────────────────────────────
@@ -152,9 +161,11 @@ function useApiMutation(options: { success: string; invalidate: () => void }) {
 
 export function useUpdateMealSlot(monthId: number) {
   const queryClient = useQueryClient()
+  const userId = useUserId()
+  const userRole = useUserRole()
   return useMutation({
     mutationFn: ({ mealId, slot, count, status }: { mealId: number; slot: 'breakfast' | 'lunch' | 'dinner'; count: number; status?: string }) =>
-      updateMealSlot({ data: { mealId, slot, count, status } }),
+      updateMealSlot({ data: { mealId, slot, count, status, userId, userRole } }),
     onMutate: async ({ mealId, slot, count }) => {
       await queryClient.cancelQueries({ queryKey: qk.meals(monthId) })
       const prev = queryClient.getQueryData<Meal[]>(qk.meals(monthId))
@@ -180,9 +191,11 @@ export function useUpdateMealSlot(monthId: number) {
 
 export function useCreateMeal(monthId: number) {
   const queryClient = useQueryClient()
+  const userId = useUserId()
+  const userRole = useUserRole()
   return useMutation({
     mutationFn: (data: import('./types').MealPayload & { status?: string }) =>
-      createMeal({ data: { memberId: data.member.id, monthId: data.month.id, recordDate: data.recordDate, breakfastCount: data.breakfastCount, lunchCount: data.lunchCount, dinnerCount: data.dinnerCount, status: data.status } }),
+      createMeal({ data: { memberId: data.member.id, monthId: data.month.id, recordDate: data.recordDate, breakfastCount: data.breakfastCount, lunchCount: data.lunchCount, dinnerCount: data.dinnerCount, status: data.status, userId, userRole } }),
     onSuccess: () => {
       invalidateMealForMonth(queryClient, monthId)
     },
@@ -192,8 +205,9 @@ export function useCreateMeal(monthId: number) {
 
 export function useDeleteMeal(monthId: number) {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   return useMutation({
-    mutationFn: (mealId: number) => deleteMeal({ data: { mealId } }),
+    mutationFn: (mealId: number) => deleteMeal({ data: { mealId, userId } }),
     onSuccess: () => {
       toast.success('Meal deleted')
       invalidateMealForMonth(queryClient, monthId)
@@ -204,21 +218,24 @@ export function useDeleteMeal(monthId: number) {
 
 export function useCreateMember() {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Member created', invalidate: () => queryClient.invalidateQueries({ queryKey: qk.members() }) })
-  return useMutation({ mutationFn: (data: MemberPayload) => createMember({ data }), onSuccess, onError })
+  return useMutation({ mutationFn: (data: MemberPayload) => createMember({ data: { ...data, userId } }), onSuccess, onError })
 }
 
 export function useUpdateMember() {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Member updated', invalidate: () => queryClient.invalidateQueries({ queryKey: qk.members() }) })
-  return useMutation({ mutationFn: ({ id, data }: { id: number; data: Partial<MemberPayload> }) => updateMember({ data: { id, ...data } }), onSuccess, onError })
+  return useMutation({ mutationFn: ({ id, data }: { id: number; data: Partial<MemberPayload> }) => updateMember({ data: { id, ...data, userId } }), onSuccess, onError })
 }
 
 export function useToggleMemberActive() {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Member status updated', invalidate: () => queryClient.invalidateQueries({ queryKey: qk.members() }) })
   return useMutation({
-    mutationFn: (id: number) => toggleMemberActive({ data: { id } }),
+    mutationFn: (id: number) => toggleMemberActive({ data: { id, userId } }),
     onSuccess,
     onError,
   })
@@ -226,26 +243,30 @@ export function useToggleMemberActive() {
 
 export function useDeleteMember() {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Member deleted', invalidate: () => queryClient.invalidateQueries({ queryKey: qk.members() }) })
-  return useMutation({ mutationFn: (id: number) => deleteMember({ data: { id } }), onSuccess, onError })
+  return useMutation({ mutationFn: (id: number) => deleteMember({ data: { id, userId } }), onSuccess, onError })
 }
 
 export function useCreateMonth() {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Month created', invalidate: () => queryClient.invalidateQueries({ queryKey: qk.months() }) })
-  return useMutation({ mutationFn: ({ year, monthNo }: { year: number; monthNo: number }) => createMonth({ data: { year, monthNo } }), onSuccess, onError })
+  return useMutation({ mutationFn: ({ year, monthNo }: { year: number; monthNo: number }) => createMonth({ data: { year, monthNo, userId } }), onSuccess, onError })
 }
 
 export function useUpdateMonth() {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Month updated', invalidate: () => queryClient.invalidateQueries({ queryKey: qk.months() }) })
-  return useMutation({ mutationFn: ({ id, data }: { id: number; data: Partial<{ year: number; monthNo: number }> }) => updateMonth({ data: { id, ...data } }), onSuccess, onError })
+  return useMutation({ mutationFn: ({ id, data }: { id: number; data: Partial<{ year: number; monthNo: number }> }) => updateMonth({ data: { id, ...data, userId } }), onSuccess, onError })
 }
 
 export function useCloseMonth() {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   return useMutation({
-    mutationFn: (monthId: number) => closeMonth({ data: { id: monthId } }),
+    mutationFn: (monthId: number) => closeMonth({ data: { id: monthId, userId } }),
     onSuccess: (_data, monthId) => {
       toast.success('Month closed')
       invalidateQueries(queryClient, [
@@ -261,8 +282,9 @@ export function useCloseMonth() {
 
 export function useReopenMonth() {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   return useMutation({
-    mutationFn: (monthId: number) => reopenMonth({ data: { id: monthId } }),
+    mutationFn: (monthId: number) => reopenMonth({ data: { id: monthId, userId } }),
     onSuccess: (_data, monthId) => {
       toast.success('Month reopened')
       invalidateQueries(queryClient, [
@@ -278,8 +300,9 @@ export function useReopenMonth() {
 
 export function useSetManager() {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   return useMutation({
-    mutationFn: ({ monthId, memberId }: { monthId: number; memberId: number }) => setManager({ data: { monthId, memberId } }),
+    mutationFn: ({ monthId, memberId }: { monthId: number; memberId: number }) => setManager({ data: { monthId, memberId, userId } }),
     onSuccess: (_data, { monthId }) => {
       toast.success('Manager assigned')
       invalidateQueries(queryClient, [
@@ -293,89 +316,103 @@ export function useSetManager() {
 
 export function useDeleteMonth() {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Month deleted', invalidate: () => queryClient.invalidateQueries({ queryKey: qk.months() }) })
-  return useMutation({ mutationFn: (id: number) => deleteMonth({ data: { id } }), onSuccess, onError })
+  return useMutation({ mutationFn: (id: number) => deleteMonth({ data: { id, userId } }), onSuccess, onError })
 }
 
 export function useCreateBazar(monthId: number) {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Bazar entry added', invalidate: () => invalidateMoneyForMonth(queryClient, monthId, qk.bazar(monthId)) })
-  return useMutation({ mutationFn: (data: BazarPayload & { status?: string }) => createBazar({ data: { memberId: data.member.id, monthId: data.month.id, amount: data.amount, description: data.description, bazarDate: data.bazarDate, status: data.status } }), onSuccess, onError })
+  return useMutation({ mutationFn: (data: BazarPayload & { status?: string }) => createBazar({ data: { memberId: data.member.id, monthId: data.month.id, amount: data.amount, description: data.description, bazarDate: data.bazarDate, status: data.status, userId } }), onSuccess, onError })
 }
 
 export function useUpdateBazar(monthId: number) {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Bazar entry updated', invalidate: () => invalidateMoneyForMonth(queryClient, monthId, qk.bazar(monthId)) })
-  return useMutation({ mutationFn: ({ id, data }: { id: number; data: Partial<BazarPayload> }) => updateBazar({ data: { id, ...(data.member && { memberId: data.member.id }), ...(data.amount !== undefined && { amount: data.amount }), description: data.description, bazarDate: data.bazarDate } }), onSuccess, onError })
+  return useMutation({ mutationFn: ({ id, data }: { id: number; data: Partial<BazarPayload> }) => updateBazar({ data: { id, ...(data.member && { memberId: data.member.id }), ...(data.amount !== undefined && { amount: data.amount }), description: data.description, bazarDate: data.bazarDate, userId } }), onSuccess, onError })
 }
 
 export function useDeleteBazar(monthId: number) {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Bazar entry deleted', invalidate: () => invalidateMoneyForMonth(queryClient, monthId, qk.bazar(monthId)) })
-  return useMutation({ mutationFn: (id: number) => deleteBazar({ data: { id } }), onSuccess, onError })
+  return useMutation({ mutationFn: (id: number) => deleteBazar({ data: { id, userId } }), onSuccess, onError })
 }
 
 export function useCreateExpense(monthId: number) {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Expense added', invalidate: () => invalidateMoneyForMonth(queryClient, monthId, qk.expenses(monthId)) })
-  return useMutation({ mutationFn: (data: ExpensePayload & { status?: string }) => createExpense({ data: { monthId: data.month.id, amount: data.amount, description: data.description, category: data.category, expenseDate: data.expenseDate, paidById: data.paidBy?.id, status: data.status } }), onSuccess, onError })
+  return useMutation({ mutationFn: (data: ExpensePayload & { status?: string }) => createExpense({ data: { monthId: data.month.id, amount: data.amount, description: data.description, category: data.category, expenseDate: data.expenseDate, paidById: data.paidBy?.id, status: data.status, userId } }), onSuccess, onError })
 }
 
 export function useUpdateExpense(monthId: number) {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Expense updated', invalidate: () => invalidateMoneyForMonth(queryClient, monthId, qk.expenses(monthId)) })
-  return useMutation({ mutationFn: ({ id, data }: { id: number; data: Partial<ExpensePayload> }) => updateExpense({ data: { id, ...(data.amount !== undefined && { amount: data.amount }), description: data.description, category: data.category, expenseDate: data.expenseDate, paidById: data.paidBy?.id } }), onSuccess, onError })
+  return useMutation({ mutationFn: ({ id, data }: { id: number; data: Partial<ExpensePayload> }) => updateExpense({ data: { id, ...(data.amount !== undefined && { amount: data.amount }), description: data.description, category: data.category, expenseDate: data.expenseDate, paidById: data.paidBy?.id, userId } }), onSuccess, onError })
 }
 
 export function useDeleteExpense(monthId: number) {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Expense deleted', invalidate: () => invalidateMoneyForMonth(queryClient, monthId, qk.expenses(monthId)) })
-  return useMutation({ mutationFn: (id: number) => deleteExpense({ data: { id } }), onSuccess, onError })
+  return useMutation({ mutationFn: (id: number) => deleteExpense({ data: { id, userId } }), onSuccess, onError })
 }
 
 export function useCreateDeposit(monthId: number) {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Deposit added', invalidate: () => invalidateMoneyForMonth(queryClient, monthId, qk.deposits(monthId)) })
-  return useMutation({ mutationFn: (data: DepositPayload) => createDeposit({ data: { memberId: data.member.id, monthId: data.month.id, amount: data.amount, depositDate: data.depositDate, description: data.description } }), onSuccess, onError })
+  return useMutation({ mutationFn: (data: DepositPayload) => createDeposit({ data: { memberId: data.member.id, monthId: data.month.id, amount: data.amount, depositDate: data.depositDate, description: data.description, userId } }), onSuccess, onError })
 }
 
 export function useUpdateDeposit(monthId: number) {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Deposit updated', invalidate: () => invalidateMoneyForMonth(queryClient, monthId, qk.deposits(monthId)) })
-  return useMutation({ mutationFn: ({ id, data }: { id: number; data: Partial<DepositPayload> }) => updateDeposit({ data: { id, ...(data.member && { memberId: data.member.id }), ...(data.amount !== undefined && { amount: data.amount }), depositDate: data.depositDate, description: data.description } }), onSuccess, onError })
+  return useMutation({ mutationFn: ({ id, data }: { id: number; data: Partial<DepositPayload> }) => updateDeposit({ data: { id, ...(data.member && { memberId: data.member.id }), ...(data.amount !== undefined && { amount: data.amount }), depositDate: data.depositDate, description: data.description, userId } }), onSuccess, onError })
 }
 
 export function useDeleteDeposit(monthId: number) {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Deposit deleted', invalidate: () => invalidateMoneyForMonth(queryClient, monthId, qk.deposits(monthId)) })
-  return useMutation({ mutationFn: (id: number) => deleteDeposit({ data: { id } }), onSuccess, onError })
+  return useMutation({ mutationFn: (id: number) => deleteDeposit({ data: { id, userId } }), onSuccess, onError })
 }
 
 export function useCreateRent(monthId: number) {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Rent set', invalidate: () => invalidateMoneyForMonth(queryClient, monthId, qk.rents(monthId)) })
-  return useMutation({ mutationFn: (data: RentPayload) => createRent({ data: { memberId: data.member.id, monthId: data.month.id, amount: data.amount } }), onSuccess, onError })
+  return useMutation({ mutationFn: (data: RentPayload) => createRent({ data: { memberId: data.member.id, monthId: data.month.id, amount: data.amount, userId } }), onSuccess, onError })
 }
 
 export function useUpdateRent(monthId: number) {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Rent updated', invalidate: () => invalidateMoneyForMonth(queryClient, monthId, qk.rents(monthId)) })
-  return useMutation({ mutationFn: ({ id, data }: { id: number; data: Partial<RentPayload> }) => updateRent({ data: { id, ...(data.member && { memberId: data.member.id }), ...(data.month && { monthId: data.month.id }), ...(data.amount !== undefined && { amount: data.amount }) } }), onSuccess, onError })
+  return useMutation({ mutationFn: ({ id, data }: { id: number; data: Partial<RentPayload> }) => updateRent({ data: { id, ...(data.member && { memberId: data.member.id }), ...(data.month && { monthId: data.month.id }), ...(data.amount !== undefined && { amount: data.amount }), userId } }), onSuccess, onError })
 }
 
 export function useDeleteRent(monthId: number) {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Rent removed', invalidate: () => invalidateMoneyForMonth(queryClient, monthId, qk.rents(monthId)) })
-  return useMutation({ mutationFn: (id: number) => deleteRent({ data: { id } }), onSuccess, onError })
+  return useMutation({ mutationFn: (id: number) => deleteRent({ data: { id, userId } }), onSuccess, onError })
 }
 
 // ── Approve / Reject ──────────────────────────────────
 
 export function useApproveMeal(monthId: number) {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   return useMutation({
     mutationFn: ({ mealId, approvedBy }: { mealId: number; approvedBy: number }) =>
-      approveMeal({ data: { mealId, approvedBy } }),
+      approveMeal({ data: { mealId, approvedBy, userId } }),
     onSuccess: () => {
       toast.success('Meal approved')
       invalidateMealForMonth(queryClient, monthId)
@@ -386,9 +423,10 @@ export function useApproveMeal(monthId: number) {
 
 export function useRejectMeal(monthId: number) {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   return useMutation({
     mutationFn: ({ mealId, approvedBy }: { mealId: number; approvedBy: number }) =>
-      rejectMeal({ data: { mealId, approvedBy } }),
+      rejectMeal({ data: { mealId, approvedBy, userId } }),
     onSuccess: () => {
       toast.success('Meal rejected')
       invalidateMealForMonth(queryClient, monthId)
@@ -399,40 +437,44 @@ export function useRejectMeal(monthId: number) {
 
 export function useApproveBazar(monthId: number) {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Bazar approved', invalidate: () => invalidateMoneyForMonth(queryClient, monthId, qk.bazar(monthId)) })
   return useMutation({
     mutationFn: ({ id, approvedBy }: { id: number; approvedBy: number }) =>
-      approveBazar({ data: { id, approvedBy } }),
+      approveBazar({ data: { id, approvedBy, userId } }),
     onSuccess, onError,
   })
 }
 
 export function useRejectBazar(monthId: number) {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Bazar rejected', invalidate: () => invalidateMoneyForMonth(queryClient, monthId, qk.bazar(monthId)) })
   return useMutation({
     mutationFn: ({ id, approvedBy }: { id: number; approvedBy: number }) =>
-      rejectBazar({ data: { id, approvedBy } }),
+      rejectBazar({ data: { id, approvedBy, userId } }),
     onSuccess, onError,
   })
 }
 
 export function useApproveExpense(monthId: number) {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Expense approved', invalidate: () => invalidateMoneyForMonth(queryClient, monthId, qk.expenses(monthId)) })
   return useMutation({
     mutationFn: ({ id, approvedBy }: { id: number; approvedBy: number }) =>
-      approveExpense({ data: { id, approvedBy } }),
+      approveExpense({ data: { id, approvedBy, userId } }),
     onSuccess, onError,
   })
 }
 
 export function useRejectExpense(monthId: number) {
   const queryClient = useQueryClient()
+  const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Expense rejected', invalidate: () => invalidateMoneyForMonth(queryClient, monthId, qk.expenses(monthId)) })
   return useMutation({
     mutationFn: ({ id, approvedBy }: { id: number; approvedBy: number }) =>
-      rejectExpense({ data: { id, approvedBy } }),
+      rejectExpense({ data: { id, approvedBy, userId } }),
     onSuccess, onError,
   })
 }

@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { eq, asc, sql } from 'drizzle-orm'
+import { eq, asc, sql, isNull } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
 import { db } from '../db'
 import { members, users } from '../db/schema'
@@ -8,6 +8,7 @@ export const listMembers = createServerFn({ method: 'GET' as const })
   .validator(() => ({}))
   .handler(async () => {
     return db.query.members.findMany({
+      where: isNull(members.deletedAt),
       orderBy: [asc(members.name)],
       with: { user: { columns: { id: true, username: true, role: true } } },
     })
@@ -22,6 +23,7 @@ export const createMember = createServerFn({ method: 'POST' as const })
       createAppUser?: boolean
       username?: string
       password?: string
+      userId?: number
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -43,7 +45,7 @@ export const createMember = createServerFn({ method: 'POST' as const })
       try {
         const [createdUser] = await db
           .insert(users)
-          .values({ username: cleanUsername, password: hash, role: 'MEMBER' })
+          .values({ username: cleanUsername, password: hash, role: 'MEMBER', createdBy: data.userId ?? null })
           .returning()
         userId = createdUser.id
       } catch (err: any) {
@@ -61,6 +63,7 @@ export const createMember = createServerFn({ method: 'POST' as const })
         phone: data.phone?.trim() || null,
         joinDate: data.joinDate,
         userId: userId ?? null,
+        createdBy: data.userId ?? null,
       })
       .returning()
 
@@ -79,10 +82,11 @@ export const updateMember = createServerFn({ method: 'POST' as const })
       createAppUser?: boolean
       username?: string
       password?: string
+      userId?: number
     }) => data,
   )
   .handler(async ({ data }) => {
-    const { id, createAppUser, username, password, ...fields } = data
+    const { id, createAppUser, username, password, userId, ...fields } = data
 
     if (createAppUser && username && password) {
       const cleanUsername = username.trim()
@@ -100,7 +104,7 @@ export const updateMember = createServerFn({ method: 'POST' as const })
       try {
         const [createdUser] = await db
           .insert(users)
-          .values({ username: cleanUsername, password: hash, role: 'MEMBER' })
+          .values({ username: cleanUsername, password: hash, role: 'MEMBER', createdBy: userId ?? null })
           .returning()
         ;(fields as any).userId = createdUser.id
       } catch (err: any) {
@@ -111,23 +115,23 @@ export const updateMember = createServerFn({ method: 'POST' as const })
       }
     }
 
-    const [updated] = await db.update(members).set(fields).where(eq(members.id, id)).returning()
+    const [updated] = await db.update(members).set({ ...fields, updatedBy: userId ?? null }).where(eq(members.id, id)).returning()
     if (!updated) throw new Error('Member not found')
     return updated
   })
 
 export const toggleMemberActive = createServerFn({ method: 'POST' as const })
-  .validator((data: { id: number }) => data)
+  .validator((data: { id: number; userId?: number }) => data)
   .handler(async ({ data }) => {
     const [member] = await db.select().from(members).where(eq(members.id, data.id)).limit(1)
     if (!member) throw new Error('Member not found')
-    const [updated] = await db.update(members).set({ active: !member.active }).where(eq(members.id, data.id)).returning()
+    const [updated] = await db.update(members).set({ active: !member.active, updatedBy: data.userId ?? null }).where(eq(members.id, data.id)).returning()
     return updated
   })
 
 export const deleteMember = createServerFn({ method: 'POST' as const })
-  .validator((data: { id: number }) => data)
+  .validator((data: { id: number; userId?: number }) => data)
   .handler(async ({ data }) => {
-    await db.delete(members).where(eq(members.id, data.id))
+    await db.update(members).set({ deletedAt: new Date(), deletedBy: data.userId ?? null }).where(eq(members.id, data.id))
     return { success: true }
   })

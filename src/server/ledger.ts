@@ -1,25 +1,24 @@
 import { createServerFn } from '@tanstack/react-start'
-import { eq } from 'drizzle-orm'
+import { eq, isNull } from 'drizzle-orm'
 import { db } from '../db'
-import { bazar, expenses, deposits, rents } from '../db/schema'
 
 export const getLedgerByMonth = createServerFn({ method: 'GET' as const })
   .validator((data: { monthId: number }) => data)
   .handler(async ({ data }) => {
     const bazarRows = await db.query.bazar.findMany({
-      where: eq(bazar.monthId, data.monthId),
+      where: (t, { and }) => and(eq(t.monthId, data.monthId), isNull(t.deletedAt)),
       with: { member: { columns: { name: true } } },
     })
     const expenseRows = await db.query.expenses.findMany({
-      where: eq(expenses.monthId, data.monthId),
+      where: (t, { and }) => and(eq(t.monthId, data.monthId), isNull(t.deletedAt)),
       with: { paidBy: { columns: { name: true } } },
     })
     const depositRows = await db.query.deposits.findMany({
-      where: eq(deposits.monthId, data.monthId),
+      where: (t, { and }) => and(eq(t.monthId, data.monthId), isNull(t.deletedAt)),
       with: { member: { columns: { name: true } } },
     })
     const rentRows = await db.query.rents.findMany({
-      where: eq(rents.monthId, data.monthId),
+      where: (t, { and }) => and(eq(t.monthId, data.monthId), isNull(t.deletedAt)),
       with: { member: { columns: { name: true } } },
     })
 
@@ -33,7 +32,11 @@ export const getLedgerByMonth = createServerFn({ method: 'GET' as const })
         description: r.description,
         category: undefined as string | undefined,
         entryDate: r.bazarDate,
+        status: r.status as 'pending' | 'approved' | 'rejected',
         createdAt: r.createdAt?.toISOString() ?? null,
+        updatedAt: r.updatedAt?.toISOString() ?? null,
+        createdBy: r.createdBy,
+        updatedBy: r.updatedBy,
       })),
       ...expenseRows.map((r) => ({
         type: 'expense' as const,
@@ -44,7 +47,11 @@ export const getLedgerByMonth = createServerFn({ method: 'GET' as const })
         description: r.description,
         category: r.category,
         entryDate: r.expenseDate,
+        status: r.status as 'pending' | 'approved' | 'rejected',
         createdAt: r.createdAt?.toISOString() ?? null,
+        updatedAt: r.updatedAt?.toISOString() ?? null,
+        createdBy: r.createdBy,
+        updatedBy: r.updatedBy,
       })),
       ...depositRows.map((r) => ({
         type: 'deposit' as const,
@@ -55,7 +62,11 @@ export const getLedgerByMonth = createServerFn({ method: 'GET' as const })
         description: r.description,
         category: undefined as string | undefined,
         entryDate: r.depositDate,
+        status: 'approved' as const,
         createdAt: r.createdAt?.toISOString() ?? null,
+        updatedAt: r.updatedAt?.toISOString() ?? null,
+        createdBy: r.createdBy,
+        updatedBy: r.updatedBy,
       })),
       ...rentRows.map((r) => ({
         type: 'rent' as const,
@@ -66,7 +77,11 @@ export const getLedgerByMonth = createServerFn({ method: 'GET' as const })
         description: null as string | null,
         category: undefined as string | undefined,
         entryDate: null as string | null,
+        status: 'approved' as const,
         createdAt: r.createdAt?.toISOString() ?? null,
+        updatedAt: r.updatedAt?.toISOString() ?? null,
+        createdBy: r.createdBy,
+        updatedBy: r.updatedBy,
       })),
     ]
 

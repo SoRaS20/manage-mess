@@ -154,6 +154,19 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
+function AuditInfo({ createdAt, updatedAt }: { createdAt?: string | null; updatedAt?: string | null }) {
+  const created = createdAt ? new Date(createdAt) : null
+  const updated = updatedAt ? new Date(updatedAt) : null
+  const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  if (!created && !updated) return null
+  return (
+    <div className="mt-0.5 text-[10px] leading-tight text-muted-foreground">
+      {created && <span>Created {fmt(created)}</span>}
+      {updated && <span>{created ? ' · ' : ''}Updated {fmt(updated)}</span>}
+    </div>
+  )
+}
+
 function LoadingRows() {
   return (
     <div className="space-y-2 p-3">
@@ -240,7 +253,10 @@ export function BazarLedger({ monthId, closed, managerId }: { monthId: number; c
           <TableBody>
             {data.map((row) => (
               <TableRow key={row.id} className={cn('transition-colors hover:bg-muted/30', row.status === 'pending' ? 'bg-yellow-50/50 dark:bg-yellow-950/20' : row.status === 'rejected' ? 'bg-destructive/5' : '')}>
-                <TableCell>{formatDate(row.bazarDate)}</TableCell>
+                <TableCell>
+                  {formatDate(row.bazarDate)}
+                  <AuditInfo createdAt={row.createdAt} updatedAt={row.updatedAt} />
+                </TableCell>
                 <TableCell className="font-medium">{row.memberName}</TableCell>
                 <TableCell className="text-muted-foreground">{row.description || '—'}</TableCell>
                 <TableCell className="text-right tabular-nums">{formatTaka(row.amount)}</TableCell>
@@ -326,10 +342,10 @@ export function BazarLedger({ monthId, closed, managerId }: { monthId: number; c
   )
 }
 
-function bazarFormValues(edit: Bazar | null) {
+function bazarFormValues(edit: Bazar | null, userMemberId?: number | null) {
   return edit
     ? { memberId: String(edit.memberId), amount: String(edit.amount), description: edit.description ?? '', bazarDate: edit.bazarDate }
-    : { memberId: '', amount: '', description: '', bazarDate: todayISO() }
+    : { memberId: userMemberId ? String(userMemberId) : '', amount: '', description: '', bazarDate: todayISO() }
 }
 
 function BazarDialog({
@@ -347,9 +363,10 @@ function BazarDialog({
   onOpenChange: (v: boolean) => void
   onSubmit: (values: BazarForm, existing: Bazar | null) => Promise<void>
 }) {
+  const userMemberId = useAuthStore((s) => s.user?.memberId)
   const form = useForm<BazarForm>({
     resolver: zodResolver(bazarSchema),
-    values: bazarFormValues(edit),
+    values: bazarFormValues(edit, userMemberId),
   })
   return (
     <FormDialog
@@ -428,7 +445,10 @@ export function ExpensesLedger({ monthId, closed, managerId }: { monthId: number
           <TableBody>
             {data.map((row) => (
               <TableRow key={row.id} className={cn('transition-colors hover:bg-muted/30', row.status === 'pending' ? 'bg-yellow-50/50 dark:bg-yellow-950/20' : row.status === 'rejected' ? 'bg-destructive/5' : '')}>
-                <TableCell>{formatDate(row.expenseDate)}</TableCell>
+                <TableCell>
+                  {formatDate(row.expenseDate)}
+                  <AuditInfo createdAt={row.createdAt} updatedAt={row.updatedAt} />
+                </TableCell>
                 <TableCell>
                   <span className="rounded bg-muted px-1.5 py-0.5 text-xs capitalize">{row.category}</span>
                 </TableCell>
@@ -515,10 +535,10 @@ export function ExpensesLedger({ monthId, closed, managerId }: { monthId: number
   )
 }
 
-function expenseFormValues(edit: Expense | null) {
+function expenseFormValues(edit: Expense | null, userMemberId?: number | null) {
   return edit
     ? { amount: String(edit.amount), description: edit.description ?? '', category: edit.category as ExpenseCategory, expenseDate: edit.expenseDate, paidById: edit.paidById != null ? String(edit.paidById) : 'none' }
-    : { amount: '', description: '', category: 'other' as const, expenseDate: todayISO(), paidById: 'none' }
+    : { amount: '', description: '', category: 'other' as const, expenseDate: todayISO(), paidById: userMemberId ? String(userMemberId) : 'none' }
 }
 
 function ExpenseDialog({
@@ -536,9 +556,10 @@ function ExpenseDialog({
   onOpenChange: (v: boolean) => void
   onSubmit: (values: ExpenseForm, existing: Expense | null) => Promise<void>
 }) {
+  const userMemberId = useAuthStore((s) => s.user?.memberId)
   const form = useForm<ExpenseForm>({
     resolver: zodResolver(expenseSchema),
-    values: expenseFormValues(edit),
+    values: expenseFormValues(edit, userMemberId),
   })
   const { data: members } = useMembers()
   return (
@@ -643,7 +664,10 @@ export function DepositsLedger({ monthId, closed, managerId }: { monthId: number
           <TableBody>
             {data.map((row) => (
               <TableRow key={row.id} className="transition-colors hover:bg-muted/30">
-                <TableCell>{formatDate(row.depositDate)}</TableCell>
+                <TableCell>
+                  {formatDate(row.depositDate)}
+                  <AuditInfo createdAt={row.createdAt} updatedAt={row.updatedAt} />
+                </TableCell>
                 <TableCell className="font-medium">{row.memberName}</TableCell>
                 <TableCell className="text-muted-foreground">{row.description || '—'}</TableCell>
                 <TableCell className="text-right tabular-nums">{formatTaka(row.amount)}</TableCell>
@@ -692,10 +716,10 @@ export function DepositsLedger({ monthId, closed, managerId }: { monthId: number
   )
 }
 
-function depositFormValues(edit: Deposit | null) {
+function depositFormValues(edit: Deposit | null, userMemberId?: number | null) {
   return edit
     ? { memberId: String(edit.memberId), amount: String(edit.amount), description: edit.description ?? '', depositDate: edit.depositDate }
-    : { memberId: '', amount: '', description: '', depositDate: todayISO() }
+    : { memberId: userMemberId ? String(userMemberId) : '', amount: '', description: '', depositDate: todayISO() }
 }
 
 function DepositDialog({
@@ -713,9 +737,10 @@ function DepositDialog({
   onOpenChange: (v: boolean) => void
   onSubmit: (values: DepositForm, existing: Deposit | null) => Promise<void>
 }) {
+  const userMemberId = useAuthStore((s) => s.user?.memberId)
   const form = useForm<DepositForm>({
     resolver: zodResolver(depositSchema),
-    values: depositFormValues(edit),
+    values: depositFormValues(edit, userMemberId),
   })
   return (
     <FormDialog

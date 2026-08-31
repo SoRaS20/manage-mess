@@ -23,6 +23,14 @@ type MealSlot = 'breakfast' | 'lunch' | 'dinner'
 
 const MAX_COUNT = 3
 
+function isPastDate(year: number, monthNo: number, day: number): boolean {
+  const now = new Date()
+  const d = new Date(year, monthNo - 1, day)
+  d.setHours(0, 0, 0, 0)
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  return d < today
+}
+
 export function MealsGrid({
   monthId,
   year,
@@ -86,6 +94,10 @@ export function MealsGrid({
     if (closed) return
     const isOwn = user?.memberId === meal.memberId
     if (!isManagerOrAdmin && !isOwn) return
+    if (!isManagerOrAdmin) {
+      const [y, m, d] = meal.recordDate.split('-').map(Number)
+      if (isPastDate(y, m, d)) return
+    }
     const field = slot === 'breakfast' ? 'breakfastCount' : slot === 'lunch' ? 'lunchCount' : 'dinnerCount'
     const current = meal[field]
     const next = current >= MAX_COUNT ? 0 : current + 1
@@ -240,7 +252,8 @@ export function MealsGrid({
                     </td>
                     {memberCols.map((member) => {
                       const meal = byKey.get(`${member.id}:${dateKey(year, monthNo, d)}`)
-                      const canEdit = !closed && (isManagerOrAdmin || member.id === user?.memberId)
+                      const pastDate = isPastDate(year, monthNo, d)
+                      const canEdit = !closed && (isManagerOrAdmin || (member.id === user?.memberId && !pastDate))
                       return (
                         <td
                           key={member.id}
@@ -249,6 +262,7 @@ export function MealsGrid({
                             isWeekend && 'bg-muted/20',
                             canEdit && 'cursor-pointer hover:bg-primary/[0.035]',
                             !canEdit && 'opacity-70',
+                            pastDate && !isManagerOrAdmin && 'pointer-events-none opacity-40',
                           )}
                           onClick={() => {
                             if (canEdit && !meal) setEditingMealInfo({ memberId: member.id, memberName: member.name, dateStr: dateKey(year, monthNo, d), meal: null })

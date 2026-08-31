@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { eq, and, sql } from 'drizzle-orm'
+import { eq, and, sql, isNull } from 'drizzle-orm'
 import { db } from '../db'
 import { months, members, meals, bazar, expenses, deposits } from '../db/schema'
 import { round2 } from './utils'
@@ -17,27 +17,27 @@ export const getDashboardSummary = createServerFn({ method: 'GET' as const })
         ), 0)`,
       })
       .from(meals)
-      .where(and(eq(meals.monthId, data.monthId), eq(meals.status, 'approved')))
+      .where(and(eq(meals.monthId, data.monthId), eq(meals.status, 'approved'), isNull(meals.deletedAt)))
 
     const [bazarAgg] = await db
       .select({ total: sql<string>`COALESCE(SUM(${bazar.amount}), 0)` })
       .from(bazar)
-      .where(and(eq(bazar.monthId, data.monthId), eq(bazar.status, 'approved')))
+      .where(and(eq(bazar.monthId, data.monthId), eq(bazar.status, 'approved'), isNull(bazar.deletedAt)))
 
     const [expenseAgg] = await db
       .select({ total: sql<string>`COALESCE(SUM(${expenses.amount}), 0)` })
       .from(expenses)
-      .where(and(eq(expenses.monthId, data.monthId), eq(expenses.status, 'approved')))
+      .where(and(eq(expenses.monthId, data.monthId), eq(expenses.status, 'approved'), isNull(expenses.deletedAt)))
 
     const [depositAgg] = await db
       .select({ total: sql<string>`COALESCE(SUM(${deposits.amount}), 0)` })
       .from(deposits)
-      .where(eq(deposits.monthId, data.monthId))
+      .where(and(eq(deposits.monthId, data.monthId), isNull(deposits.deletedAt)))
 
     const [memberCount] = await db
       .select({ count: sql<number>`COUNT(*)::int` })
       .from(members)
-      .where(eq(members.active, true))
+      .where(and(eq(members.active, true), isNull(members.deletedAt)))
 
     const totalMeals = Number(mealAgg.total)
     const totalBazar = Number(bazarAgg.total)

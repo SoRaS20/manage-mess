@@ -14,11 +14,49 @@ import {
 import { formatDate, formatTaka } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
+function AuditInfo({ createdAt, updatedAt }: { createdAt?: string | null; updatedAt?: string | null }) {
+  const created = createdAt ? new Date(createdAt) : null
+  const updated = updatedAt ? new Date(updatedAt) : null
+  const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  if (!created && !updated) return null
+  return (
+    <div className="text-[10px] leading-tight text-muted-foreground">
+      {created && <span>Created {fmt(created)}</span>}
+      {updated && <span>{created ? ' · ' : ''}Updated {fmt(updated)}</span>}
+    </div>
+  )
+}
+
 const TYPE_META: Record<LedgerEntryType, { label: string; className: string }> = {
   bazar: { label: 'Bazar', className: 'bg-primary/10 text-primary' },
   expense: { label: 'Expense', className: 'bg-destructive/10 text-destructive' },
   deposit: { label: 'Deposit', className: 'bg-emerald-500/10 text-emerald-600' },
   rent: { label: 'Rent', className: 'bg-muted text-muted-foreground' },
+}
+
+function StatusBadge({ status }: { status?: string | null }) {
+  if (!status || status === 'approved') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+        <span className="size-1 rounded-full bg-green-500" />
+        Approved
+      </span>
+    )
+  }
+  if (status === 'pending') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+        <span className="size-1 rounded-full bg-yellow-500" />
+        Pending
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
+      <span className="size-1 rounded-full bg-red-500" />
+      Rejected
+    </span>
+  )
 }
 
 export function formatLoggedAt(createdAt?: string | null): string {
@@ -40,7 +78,9 @@ export function LedgerFeed({ monthId }: { monthId: number }) {
 
   const totals = useMemo(() => {
     const t: Record<LedgerEntryType, number> = { bazar: 0, expense: 0, deposit: 0, rent: 0 }
-    for (const row of data ?? []) t[row.type] += row.amount
+    for (const row of data ?? []) {
+      if (row.status === 'approved' || !row.status) t[row.type] += row.amount
+    }
     return t
   }, [data])
 
@@ -73,6 +113,7 @@ export function LedgerFeed({ monthId }: { monthId: number }) {
             <TableRow className="bg-muted/50">
               <TableHead className="font-semibold">Logged at</TableHead>
               <TableHead className="font-semibold">Type</TableHead>
+              <TableHead className="font-semibold">Status</TableHead>
               <TableHead className="font-semibold">Member</TableHead>
               <TableHead className="font-semibold">Description</TableHead>
               <TableHead className="font-semibold">Entry date</TableHead>
@@ -82,11 +123,17 @@ export function LedgerFeed({ monthId }: { monthId: number }) {
           <TableBody>
             {data.map((row: LedgerEntry) => (
               <TableRow key={`${row.type}-${row.id}`} className="transition-colors hover:bg-muted/30">
-                <TableCell className="whitespace-nowrap tabular-nums text-sm">{formatLoggedAt(row.createdAt)}</TableCell>
+                <TableCell className="whitespace-nowrap tabular-nums text-sm">
+                  {formatLoggedAt(row.createdAt)}
+                  <AuditInfo createdAt={row.createdAt} updatedAt={row.updatedAt} />
+                </TableCell>
                 <TableCell>
                   <span className={cn('rounded-md px-2 py-1 text-xs font-medium capitalize', TYPE_META[row.type].className)}>
                     {TYPE_META[row.type].label}
                   </span>
+                </TableCell>
+                <TableCell>
+                  <StatusBadge status={row.status} />
                 </TableCell>
                 <TableCell className="font-medium">{row.memberName ?? '—'}</TableCell>
                 <TableCell className="max-w-64 truncate text-muted-foreground">{row.description || (row.category ? row.category : '—')}</TableCell>
