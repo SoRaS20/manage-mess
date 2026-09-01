@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { eq, and, sql, isNull } from 'drizzle-orm'
 import { db } from '../db'
-import { months, members, meals, bazar, expenses, deposits, rents } from '../db/schema'
+import { months, members, meals, bazar, expenses, deposits, rents, previousBalances } from '../db/schema'
 import { round2, dailyCount } from './utils'
 
 async function mealCountFor(memberId: number, monthId: number): Promise<number> {
@@ -44,14 +44,32 @@ async function rentFor(memberId: number, monthId: number): Promise<number> {
   return row ? Number(row.amount) : 0
 }
 
+async function previousBalanceFor(memberId: number, monthId: number): Promise<number> {
+  try {
+    const [row] = await db
+      .select({ amount: previousBalances.amount })
+      .from(previousBalances)
+      .where(and(eq(previousBalances.memberId, memberId), eq(previousBalances.monthId, monthId), isNull(previousBalances.deletedAt)))
+      .limit(1)
+    return row ? Number(row.amount) : 0
+  } catch {
+    return 0
+  }
+}
+
 interface Summary {
   totalMeals: number
   totalBazar: number
   totalExpenses: number
+  totalRegularExpenses: number
+  totalBillableExpenses: number
   totalDeposits: number
+  totalPreviousBalances: number
   memberCount: number
   mealRate: number
   expenseSharePerMember: number
+  regularSharePerMember: number
+  billableSharePerMember: number
 }
 
 async function buildSummary(monthId: number): Promise<Summary | null> {
@@ -72,15 +90,65 @@ async function buildSummary(monthId: number): Promise<Summary | null> {
     .from(bazar)
     .where(and(eq(bazar.monthId, monthId), eq(bazar.status, 'approved'), isNull(bazar.deletedAt)))
 
-  const [expenseAgg] = await db
-    .select({ total: sql<string>`COALESCE(SUM(${expenses.amount}), 0)` })
-    .from(expenses)
-    .where(and(eq(expenses.monthId, monthId), eq(expenses.status, 'approved'), isNull(expenses.deletedAt)))
+  // Expense aggregates: split by expense_type, fallback if column missing
+  let totalExpenses = 0
+  let totalRegularExpenses = 0
+  let totalBillableExpenses = 0
+  try {
+    const [expenseAgg] = await db
+      .select({ total: sql<string>`COALESCE(SUM(${expenses.amount}), 0)` })
+      .from(expenses)
+      .where(and(eq(expenses.monthId, monthId), eq(expenses.status, 'approved'), isNull(expenses.deletedAt)))
+    totalExpenses = Number(expenseAgg.total)
+
+    const [regularAgg] = await db
+      .select({ total: sql<string>`COALESCE(SUM(CASE WHEN ${expenses.expenseType} = 'regular' THEN ${expenses.amount}::numeric ELSE 0 END), 0)` })
+      .from(expenses)
+      .where(and(eq(expenses.monthId, monthId), eq(expenses.status, 'approved'), isNull(expenses.deletedAt)))
+    totalRegularExpenses = Number(regularAgg.total)
+
+    const [billableAgg] = await db
+      .select({ total: sql<string>`COALESCE(SUM(CASE WHEN ${expenses.expenseType} = 'billable' THEN ${expenses.amount}::numeric ELSE 0 END), 0)` })
+      .from(expenses)
+      .where(and(eq(expenses.monthId, monthId), eq(expenses.status, 'approved'), isNull(expenses.deletedAt)))
+    totalBillableExpenses = Number(billableAgg.total)
+
+    // If both splits are 0 but total >0, treat all as billable (fallback for old data without expense_type)
+    if (totalRegularExpenses === 0 && totalBillableExpenses === 0 && totalExpenses > 0) {
+      totalBillableExpenses = totalExpenses
+    }
+    // If billable still 0 and regular has value but total mismatch, adjust
+    if (totalBillableExpenses + totalRegularExpenses !== totalExpenses && totalExpenses > 0) {
+      // recalc ensures consistency: let total drive split if expense_type null
+      const diff = totalExpenses - (totalRegularExpenses + totalBillableExpenses)
+      if (diff !== 0) totalBillableExpenses += diff
+    }
+  } catch {
+    // column missing -> fallback to total only as billable
+    const [fallbackAgg] = await db
+      .select({ total: sql<string>`COALESCE(SUM(${expenses.amount}), 0)` })
+      .from(expenses)
+      .where(and(eq(expenses.monthId, monthId), eq(expenses.status, 'approved'), isNull(expenses.deletedAt)))
+    totalExpenses = Number(fallbackAgg.total)
+    totalBillableExpenses = totalExpenses
+    totalRegularExpenses = 0
+  }
 
   const [depositAgg] = await db
     .select({ total: sql<string>`COALESCE(SUM(${deposits.amount}), 0)` })
     .from(deposits)
     .where(and(eq(deposits.monthId, monthId), isNull(deposits.deletedAt)))
+
+  let totalPreviousBalances = 0
+  try {
+    const [prevAgg] = await db
+      .select({ total: sql<string>`COALESCE(SUM(${previousBalances.amount}), 0)` })
+      .from(previousBalances)
+      .where(and(eq(previousBalances.monthId, monthId), isNull(previousBalances.deletedAt)))
+    totalPreviousBalances = Number(prevAgg.total)
+  } catch {
+    totalPreviousBalances = 0
+  }
 
   const [memberCount] = await db
     .select({ count: sql<number>`COUNT(*)::int` })
@@ -89,7 +157,6 @@ async function buildSummary(monthId: number): Promise<Summary | null> {
 
   const totalMeals = Number(mealAgg.total)
   const totalBazar = Number(bazarAgg.total)
-  const totalExpenses = Number(expenseAgg.total)
   const totalDeposits = Number(depositAgg.total)
   const activeMemberCount = memberCount.count
 
@@ -97,10 +164,15 @@ async function buildSummary(monthId: number): Promise<Summary | null> {
     totalMeals,
     totalBazar,
     totalExpenses,
+    totalRegularExpenses,
+    totalBillableExpenses,
     totalDeposits,
+    totalPreviousBalances,
     memberCount: activeMemberCount,
     mealRate: totalMeals > 0 ? round2(totalBazar / totalMeals) : 0,
     expenseSharePerMember: activeMemberCount > 0 ? round2(totalExpenses / activeMemberCount) : 0,
+    regularSharePerMember: activeMemberCount > 0 ? round2(totalRegularExpenses / activeMemberCount) : 0,
+    billableSharePerMember: activeMemberCount > 0 ? round2(totalBillableExpenses / activeMemberCount) : 0,
   }
 }
 
@@ -108,13 +180,19 @@ async function buildBalance(memberId: number, memberName: string, monthId: numbe
   const mealsCount = await mealCountFor(memberId, monthId)
   const mealCost = round2(mealsCount * summary.mealRate)
   const expenseShare = summary.expenseSharePerMember
+  const regularShare = summary.regularSharePerMember
+  const billableShare = summary.billableSharePerMember
   const bazarContribution = await bazarFor(memberId, monthId)
   const expenseContribution = await expensePaidByFor(memberId, monthId)
   const rent = await rentFor(memberId, monthId)
   const deposit = await depositFor(memberId, monthId)
+  const previousBalance = await previousBalanceFor(memberId, monthId)
 
   let foodBalance = round2(bazarContribution + expenseContribution - mealCost - expenseShare)
   const rentBalance = round2(deposit - rent)
+  // New: total payable per user spec: gross = billableShare + previousBalance + rent
+  const grossPayable = round2(billableShare + previousBalance + rent)
+  const netDue = round2(grossPayable - deposit)
 
   return {
     memberId,
@@ -123,6 +201,11 @@ async function buildBalance(memberId: number, memberName: string, monthId: numbe
     mealRate: summary.mealRate,
     mealCost,
     expenseShare,
+    regularShare,
+    billableShare,
+    previousBalance,
+    grossPayable,
+    netDue,
     bazarContribution,
     expenseContribution,
     foodBalance,
@@ -153,21 +236,28 @@ export const getMonthlyReport = createServerFn({ method: 'GET' as const })
       const deposit = await depositFor(m.id, data.monthId)
       const bazarContribution = await bazarFor(m.id, data.monthId)
       const expenseContribution = await expensePaidByFor(m.id, data.monthId)
+      const previousBalance = await previousBalanceFor(m.id, data.monthId)
 
-      const hasParticipation = mealsCount > 0 || rent > 0 || deposit > 0 || bazarContribution > 0 || expenseContribution > 0
+      const hasParticipation = mealsCount > 0 || rent > 0 || deposit > 0 || bazarContribution > 0 || expenseContribution > 0 || previousBalance !== 0
       const isIncluded = (m.active && !m.banned) || hasParticipation
       if (!isIncluded) continue
 
       const mealCost = round2(mealsCount * summary.mealRate)
       let expenseShare = summary.expenseSharePerMember
+      let regularShare = summary.regularSharePerMember
+      let billableShare = summary.billableSharePerMember
       let foodBalance = round2(bazarContribution + expenseContribution - mealCost - expenseShare)
 
       if ((m.banned || !m.active) && mealsCount === 0) {
         expenseShare = 0
+        regularShare = 0
+        billableShare = 0
         foodBalance = round2(bazarContribution + expenseContribution - mealCost - 0)
       }
 
       const rentBalance = round2(deposit - rent)
+      const grossPayable = round2(billableShare + previousBalance + rent)
+      const netDue = round2(grossPayable - deposit)
 
       memberBalances.push({
         memberId: m.id,
@@ -176,6 +266,11 @@ export const getMonthlyReport = createServerFn({ method: 'GET' as const })
         mealRate: summary.mealRate,
         mealCost,
         expenseShare,
+        regularShare,
+        billableShare,
+        previousBalance,
+        grossPayable,
+        netDue,
         bazarContribution,
         expenseContribution,
         foodBalance,
@@ -192,6 +287,11 @@ export const getMonthlyReport = createServerFn({ method: 'GET' as const })
       deposits: round2(memberBalances.reduce((s, r) => s + r.deposit, 0)),
       mealCost: round2(memberBalances.reduce((s, r) => s + r.mealCost, 0)),
       expenses: summary.totalExpenses,
+      regularExpenses: summary.totalRegularExpenses,
+      billableExpenses: summary.totalBillableExpenses,
+      previousBalances: round2(memberBalances.reduce((s, r) => s + r.previousBalance, 0)),
+      grossPayable: round2(memberBalances.reduce((s, r) => s + r.grossPayable, 0)),
+      netDue: round2(memberBalances.reduce((s, r) => s + r.netDue, 0)),
       rent: round2(memberBalances.reduce((s, r) => s + r.rent, 0)),
       bazarContributions: round2(memberBalances.reduce((s, r) => s + r.bazarContribution, 0)),
       expenseContributions: round2(memberBalances.reduce((s, r) => s + r.expenseContribution, 0)),
@@ -207,9 +307,14 @@ export const getMonthlyReport = createServerFn({ method: 'GET' as const })
         totalBazar: summary.totalBazar,
         mealRate: summary.mealRate,
         totalExpenses: summary.totalExpenses,
+        totalRegularExpenses: summary.totalRegularExpenses,
+        totalBillableExpenses: summary.totalBillableExpenses,
         totalDeposits: summary.totalDeposits,
+        totalPreviousBalances: summary.totalPreviousBalances,
         memberCount: summary.memberCount,
         expenseSharePerMember: summary.expenseSharePerMember,
+        regularSharePerMember: summary.regularSharePerMember,
+        billableSharePerMember: summary.billableSharePerMember,
       },
       members: memberBalances,
       totals,
@@ -290,6 +395,11 @@ export const getMemberReport = createServerFn({ method: 'GET' as const })
       mealRate: balance.mealRate,
       mealCost: balance.mealCost,
       expenseShare: balance.expenseShare,
+      regularShare: balance.regularShare,
+      billableShare: balance.billableShare,
+      previousBalance: balance.previousBalance,
+      grossPayable: balance.grossPayable,
+      netDue: balance.netDue,
       bazarContribution: balance.bazarContribution,
       expenseContribution: balance.expenseContribution,
       totalDeposit: balance.deposit,

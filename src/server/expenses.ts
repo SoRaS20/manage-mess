@@ -18,6 +18,7 @@ export const listExpensesByMonth = createServerFn({ method: 'GET' as const })
       amount: Number(r.amount),
       description: r.description,
       category: r.category,
+      expenseType: ((r as any).expenseType ?? 'billable') as 'regular' | 'billable',
       expenseDate: r.expenseDate,
       paidById: r.paidById,
       paidByName: r.paidBy?.name ?? null,
@@ -38,6 +39,7 @@ export const createExpense = createServerFn({ method: 'POST' as const })
       amount: number
       description?: string
       category: string
+      expenseType?: string
       expenseDate: string
       paidById?: number
       status?: string
@@ -46,6 +48,7 @@ export const createExpense = createServerFn({ method: 'POST' as const })
   )
   .handler(async ({ data }) => {
     await assertMonthOpen(data.monthId)
+    const expenseType = data.expenseType === 'regular' ? 'regular' : 'billable'
     const [created] = await db
       .insert(expenses)
       .values({
@@ -53,6 +56,7 @@ export const createExpense = createServerFn({ method: 'POST' as const })
         amount: String(data.amount),
         description: data.description || null,
         category: data.category,
+        expenseType,
         expenseDate: data.expenseDate,
         paidById: data.paidById || null,
         status: data.status || 'approved',
@@ -69,6 +73,7 @@ export const updateExpense = createServerFn({ method: 'POST' as const })
       amount?: number
       description?: string
       category?: string
+      expenseType?: string
       expenseDate?: string
       paidById?: number
       userId?: number
@@ -84,6 +89,7 @@ export const updateExpense = createServerFn({ method: 'POST' as const })
     if (fields.amount !== undefined) updateData.amount = String(fields.amount)
     if (fields.description !== undefined) updateData.description = fields.description || null
     if (fields.category !== undefined) updateData.category = fields.category
+    if (fields.expenseType !== undefined) updateData.expenseType = fields.expenseType === 'regular' ? 'regular' : 'billable'
     if (fields.expenseDate !== undefined) updateData.expenseDate = fields.expenseDate
     if (fields.paidById !== undefined) updateData.paidById = fields.paidById || null
     updateData.updatedBy = userId ?? null

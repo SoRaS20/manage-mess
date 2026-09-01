@@ -8,6 +8,7 @@ import { listBazarByMonth, createBazar, updateBazar, deleteBazar, approveBazar, 
 import { listExpensesByMonth, createExpense, updateExpense, deleteExpense, approveExpense, rejectExpense } from '@/server/expenses'
 import { listDepositsByMonth, createDeposit, updateDeposit, deleteDeposit } from '@/server/deposits'
 import { listRentsByMonth, createRent, updateRent, deleteRent } from '@/server/rents'
+import { listPreviousBalancesByMonth, createPreviousBalance, updatePreviousBalance, deletePreviousBalance } from '@/server/previousBalances'
 import { getDashboardSummary } from '@/server/dashboard'
 import { getLedgerByMonth } from '@/server/ledger'
 import { getMonthlyReport, getDailyReport, getMemberReport } from '@/server/reports'
@@ -19,6 +20,7 @@ import type {
   ExpensePayload,
   Meal,
   MemberPayload,
+  PreviousBalancePayload,
   RentPayload,
 } from './types'
 
@@ -33,6 +35,7 @@ export const qk = {
   expenses: (monthId: number) => ['expenses', monthId] as const,
   deposits: (monthId: number) => ['deposits', monthId] as const,
   rents: (monthId: number) => ['rents', monthId] as const,
+  previousBalances: (monthId: number) => ['previousBalances', monthId] as const,
   ledger: (monthId: number) => ['ledger', monthId] as const,
   reports: (monthId: number) => ['reports', monthId] as const,
   monthlyReport: (monthId: number) => ['reports', monthId, 'monthly'] as const,
@@ -119,6 +122,10 @@ export function useDeposits(monthId: number) {
 
 export function useRents(monthId: number) {
   return useQuery({ queryKey: qk.rents(monthId), queryFn: () => listRentsByMonth({ data: { monthId } }) })
+}
+
+export function usePreviousBalances(monthId: number) {
+  return useQuery({ queryKey: qk.previousBalances(monthId), queryFn: () => listPreviousBalancesByMonth({ data: { monthId } }) })
 }
 
 export function useLedger(monthId: number) {
@@ -346,14 +353,14 @@ export function useCreateExpense(monthId: number) {
   const queryClient = useQueryClient()
   const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Expense added', invalidate: () => invalidateMoneyForMonth(queryClient, monthId, qk.expenses(monthId)) })
-  return useMutation({ mutationFn: (data: ExpensePayload & { status?: string }) => createExpense({ data: { monthId: data.month.id, amount: data.amount, description: data.description, category: data.category, expenseDate: data.expenseDate, paidById: data.paidBy?.id, status: data.status, userId } }), onSuccess, onError })
+  return useMutation({ mutationFn: (data: ExpensePayload & { status?: string }) => createExpense({ data: { monthId: data.month.id, amount: data.amount, description: data.description, category: data.category, expenseType: (data.expenseType as string), expenseDate: data.expenseDate, paidById: data.paidBy?.id, status: data.status, userId } }), onSuccess, onError })
 }
 
 export function useUpdateExpense(monthId: number) {
   const queryClient = useQueryClient()
   const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Expense updated', invalidate: () => invalidateMoneyForMonth(queryClient, monthId, qk.expenses(monthId)) })
-  return useMutation({ mutationFn: ({ id, data }: { id: number; data: Partial<ExpensePayload> }) => updateExpense({ data: { id, ...(data.amount !== undefined && { amount: data.amount }), description: data.description, category: data.category, expenseDate: data.expenseDate, paidById: data.paidBy?.id, userId } }), onSuccess, onError })
+  return useMutation({ mutationFn: ({ id, data }: { id: number; data: Partial<ExpensePayload> }) => updateExpense({ data: { id, ...(data.amount !== undefined && { amount: data.amount }), description: data.description, category: data.category, expenseType: (data.expenseType as string | undefined), expenseDate: data.expenseDate, paidById: data.paidBy?.id, userId } }), onSuccess, onError })
 }
 
 export function useDeleteExpense(monthId: number) {
@@ -403,6 +410,27 @@ export function useDeleteRent(monthId: number) {
   const userId = useUserId()
   const { onSuccess, onError } = useApiMutation({ success: 'Rent removed', invalidate: () => invalidateMoneyForMonth(queryClient, monthId, qk.rents(monthId)) })
   return useMutation({ mutationFn: (id: number) => deleteRent({ data: { id, userId } }), onSuccess, onError })
+}
+
+export function useCreatePreviousBalance(monthId: number) {
+  const queryClient = useQueryClient()
+  const userId = useUserId()
+  const { onSuccess, onError } = useApiMutation({ success: 'Previous balance set', invalidate: () => invalidateMoneyForMonth(queryClient, monthId, qk.previousBalances(monthId)) })
+  return useMutation({ mutationFn: (data: PreviousBalancePayload) => createPreviousBalance({ data: { memberId: data.member.id, monthId: data.month.id, amount: data.amount, description: data.description, userId } }), onSuccess, onError })
+}
+
+export function useUpdatePreviousBalance(monthId: number) {
+  const queryClient = useQueryClient()
+  const userId = useUserId()
+  const { onSuccess, onError } = useApiMutation({ success: 'Previous balance updated', invalidate: () => invalidateMoneyForMonth(queryClient, monthId, qk.previousBalances(monthId)) })
+  return useMutation({ mutationFn: ({ id, data }: { id: number; data: Partial<PreviousBalancePayload> }) => updatePreviousBalance({ data: { id, ...(data.member && { memberId: data.member.id }), ...(data.month && { monthId: data.month.id }), ...(data.amount !== undefined && { amount: data.amount }), description: data.description, userId } }), onSuccess, onError })
+}
+
+export function useDeletePreviousBalance(monthId: number) {
+  const queryClient = useQueryClient()
+  const userId = useUserId()
+  const { onSuccess, onError } = useApiMutation({ success: 'Previous balance removed', invalidate: () => invalidateMoneyForMonth(queryClient, monthId, qk.previousBalances(monthId)) })
+  return useMutation({ mutationFn: (id: number) => deletePreviousBalance({ data: { id, userId } }), onSuccess, onError })
 }
 
 // ── Approve / Reject ──────────────────────────────────

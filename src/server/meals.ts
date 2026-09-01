@@ -233,7 +233,7 @@ export const generateMeals = createServerFn({ method: 'POST' as const })
             memberId: member.id,
             monthId: data.monthId,
             recordDate: dateStr,
-            breakfastCount: 1,
+            breakfastCount: 0,
             lunchCount: 1,
             dinnerCount: 1,
             status: 'approved',

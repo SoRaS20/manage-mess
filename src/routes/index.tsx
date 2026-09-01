@@ -89,8 +89,25 @@ function DashboardPage() {
         <StatCard
           title="Total expenses"
           value={dashboard ? formatTaka(dashboard.totalExpenses) : '—'}
+          description={dashboard ? `Billable ${formatTaka(dashboard.totalBillableExpenses)} · Regular ${formatTaka(dashboard.totalRegularExpenses)}` : undefined}
           icon={<FlaskConical className="size-5" />}
           iconBg="bg-destructive/10 text-destructive"
+          loading={isLoading}
+        />
+        <StatCard
+          title="Billable share / member"
+          value={dashboard ? formatTaka(dashboard.billableSharePerMember) : '—'}
+          description={`Billable only (wifi etc) ÷ ${dashboard?.memberCount ?? 0} members`}
+          icon={<Receipt className="size-5" />}
+          iconBg="bg-violet-500/10 text-violet-600 dark:text-violet-400"
+          loading={isLoading}
+        />
+        <StatCard
+          title="Regular share / member"
+          value={dashboard ? formatTaka(dashboard.regularSharePerMember) : '—'}
+          description="Regular expenses ÷ active members"
+          icon={<Receipt className="size-5" />}
+          iconBg="bg-amber-500/10 text-amber-600 dark:text-amber-400"
           loading={isLoading}
         />
         <StatCard
@@ -101,11 +118,19 @@ function DashboardPage() {
           loading={isLoading}
         />
         <StatCard
-          title="Expense share / member"
+          title="Prev balances"
+          value={dashboard ? formatTaka(dashboard.totalPreviousBalances) : '—'}
+          description="Sum of previous dues this month"
+          icon={<Wallet className="size-5" />}
+          iconBg="bg-orange-500/10 text-orange-600 dark:text-orange-400"
+          loading={isLoading}
+        />
+        <StatCard
+          title="Expense share (all) / member"
           value={dashboard ? formatTaka(dashboard.expenseSharePerMember) : '—'}
-          description={`Split across ${dashboard?.memberCount ?? 0} active members`}
+          description={`Total expenses ÷ ${dashboard?.memberCount ?? 0} members`}
           icon={<Receipt className="size-5" />}
-          iconBg="bg-violet-500/10 text-violet-600 dark:text-violet-400"
+          iconBg="bg-muted"
           loading={isLoading}
         />
         <StatCard
@@ -198,10 +223,10 @@ function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Member balances</CardTitle>
-          <CardDescription>Individual summary of meals, costs, expenses, and net balance.</CardDescription>
+          <CardTitle className="text-base">Member balances — Total Pay = Billable + Previous + Rent</CardTitle>
+          <CardDescription>Individual summary: Gross Pay = billable share + previous balance + rent. Net Due = Gross − deposit.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           {reportLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 4 }).map((_, i) => (
@@ -214,10 +239,12 @@ function DashboardPage() {
                 <TableRow>
                   <TableHead>Member</TableHead>
                   <TableHead className="text-right">Meals</TableHead>
-                  <TableHead className="text-right">Meal cost</TableHead>
-                  <TableHead className="text-right">Expense</TableHead>
+                  <TableHead className="text-right">Billable</TableHead>
+                  <TableHead className="text-right">Prev</TableHead>
                   <TableHead className="text-right">Rent</TableHead>
+                  <TableHead className="text-right">Gross Pay</TableHead>
                   <TableHead className="text-right">Deposit</TableHead>
+                  <TableHead className="text-right">Net Due</TableHead>
                   <TableHead className="text-right">Balance</TableHead>
                 </TableRow>
               </TableHeader>
@@ -226,10 +253,12 @@ function DashboardPage() {
                   <TableRow key={m.memberId}>
                     <TableCell className="font-medium">{m.memberName}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatNumber(m.meals)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatTaka(m.mealCost)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatTaka(m.expenseShare)}</TableCell>
+                    <TableCell className="text-right tabular-nums text-violet-600">{formatTaka(m.billableShare)}</TableCell>
+                    <TableCell className="text-right tabular-nums text-orange-600">{formatTaka(m.previousBalance)}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatTaka(m.rent)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatTaka(m.deposit)}</TableCell>
+                    <TableCell className="text-right tabular-nums font-semibold">{formatTaka(m.grossPayable)}</TableCell>
+                    <TableCell className="text-right tabular-nums text-purple-600">{formatTaka(m.deposit)}</TableCell>
+                    <TableCell className={`text-right font-bold tabular-nums ${m.netDue <= 0 ? 'text-emerald-600' : 'text-destructive'}`}>{formatTaka(m.netDue)}</TableCell>
                     <TableCell className={`text-right font-medium tabular-nums ${m.balance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
                       {formatTaka(m.balance)}
                     </TableCell>

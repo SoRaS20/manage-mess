@@ -375,7 +375,7 @@ function MealEntryDialog({
   onSave: (counts: { breakfastCount: number; lunchCount: number; dinnerCount: number }) => Promise<void>
   onDelete: () => Promise<void>
 }) {
-  const [breakfastCount, setBreakfastCount] = useState(info.meal ? info.meal.breakfastCount : 1)
+  const [breakfastCount, setBreakfastCount] = useState(info.meal ? info.meal.breakfastCount : 0)
   const [lunchCount, setLunchCount] = useState(info.meal ? info.meal.lunchCount : 1)
   const [dinnerCount, setDinnerCount] = useState(info.meal ? info.meal.dinnerCount : 1)
 

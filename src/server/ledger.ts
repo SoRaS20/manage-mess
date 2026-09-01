@@ -21,6 +21,15 @@ export const getLedgerByMonth = createServerFn({ method: 'GET' as const })
       where: (t, { and }) => and(eq(t.monthId, data.monthId), isNull(t.deletedAt)),
       with: { member: { columns: { name: true } } },
     })
+    let previousBalanceRows: any[] = []
+    try {
+      previousBalanceRows = await db.query.previousBalances.findMany({
+        where: (t, { and }) => and(eq(t.monthId, data.monthId), isNull(t.deletedAt)),
+        with: { member: { columns: { name: true } } },
+      })
+    } catch {
+      previousBalanceRows = []
+    }
 
     const entries = [
       ...bazarRows.map((r) => ({
@@ -31,6 +40,7 @@ export const getLedgerByMonth = createServerFn({ method: 'GET' as const })
         amount: Number(r.amount),
         description: r.description,
         category: undefined as string | undefined,
+        expenseType: undefined as string | undefined,
         entryDate: r.bazarDate,
         status: r.status as 'pending' | 'approved' | 'rejected',
         createdAt: r.createdAt?.toISOString() ?? null,
@@ -46,6 +56,7 @@ export const getLedgerByMonth = createServerFn({ method: 'GET' as const })
         amount: Number(r.amount),
         description: r.description,
         category: r.category,
+        expenseType: ((r as any).expenseType ?? 'billable') as string,
         entryDate: r.expenseDate,
         status: r.status as 'pending' | 'approved' | 'rejected',
         createdAt: r.createdAt?.toISOString() ?? null,
@@ -61,6 +72,7 @@ export const getLedgerByMonth = createServerFn({ method: 'GET' as const })
         amount: Number(r.amount),
         description: r.description,
         category: undefined as string | undefined,
+        expenseType: undefined as string | undefined,
         entryDate: r.depositDate,
         status: 'approved' as const,
         createdAt: r.createdAt?.toISOString() ?? null,
@@ -76,6 +88,23 @@ export const getLedgerByMonth = createServerFn({ method: 'GET' as const })
         amount: Number(r.amount),
         description: null as string | null,
         category: undefined as string | undefined,
+        expenseType: undefined as string | undefined,
+        entryDate: null as string | null,
+        status: 'approved' as const,
+        createdAt: r.createdAt?.toISOString() ?? null,
+        updatedAt: r.updatedAt?.toISOString() ?? null,
+        createdBy: r.createdBy,
+        updatedBy: r.updatedBy,
+      })),
+      ...previousBalanceRows.map((r: any) => ({
+        type: 'previous_balance' as const,
+        id: r.id,
+        memberId: r.memberId,
+        memberName: r.member.name,
+        amount: Number(r.amount),
+        description: r.description,
+        category: undefined as string | undefined,
+        expenseType: undefined as string | undefined,
         entryDate: null as string | null,
         status: 'approved' as const,
         createdAt: r.createdAt?.toISOString() ?? null,

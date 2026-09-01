@@ -69,12 +69,15 @@ export type Bazar = {
 
 export type ExpenseCategory = 'gas' | 'electricity' | 'water' | 'internet' | 'other'
 
+export type ExpenseType = 'regular' | 'billable'
+
 export type Expense = {
   id: number
   monthId: number
   amount: number
   description: string | null
   category: string
+  expenseType: ExpenseType
   expenseDate: string
   paidById: number | null
   paidByName: string | null
@@ -113,7 +116,20 @@ export type Rent = {
   updatedBy: number | null
 }
 
-export type LedgerEntryType = 'bazar' | 'expense' | 'deposit' | 'rent'
+export type PreviousBalance = {
+  id: number
+  memberId: number
+  memberName: string
+  monthId: number
+  amount: number
+  description: string | null
+  createdAt: string
+  updatedAt: string | null
+  createdBy: number | null
+  updatedBy: number | null
+}
+
+export type LedgerEntryType = 'bazar' | 'expense' | 'deposit' | 'rent' | 'previous_balance'
 
 export type LedgerEntry = {
   type: LedgerEntryType
@@ -123,6 +139,7 @@ export type LedgerEntry = {
   amount: number
   description?: string | null
   category?: string
+  expenseType?: ExpenseType
   entryDate?: string | null
   status?: EntryStatus | null
   createdAt?: string | null
@@ -141,8 +158,13 @@ export type DashboardSummary = {
   totalBazar: number
   mealRate: number
   totalExpenses: number
+  totalRegularExpenses: number
+  totalBillableExpenses: number
   totalDeposits: number
+  totalPreviousBalances: number
   expenseSharePerMember: number
+  regularSharePerMember: number
+  billableSharePerMember: number
 }
 
 export type MonthlyReport = {
@@ -152,9 +174,14 @@ export type MonthlyReport = {
     totalBazar: number
     mealRate: number
     totalExpenses: number
+    totalRegularExpenses: number
+    totalBillableExpenses: number
     totalDeposits: number
+    totalPreviousBalances: number
     memberCount: number
     expenseSharePerMember: number
+    regularSharePerMember: number
+    billableSharePerMember: number
   }
   members: Array<{
     memberId: number
@@ -163,6 +190,11 @@ export type MonthlyReport = {
     mealRate: number
     mealCost: number
     expenseShare: number
+    regularShare: number
+    billableShare: number
+    previousBalance: number
+    grossPayable: number
+    netDue: number
     bazarContribution: number
     expenseContribution: number
     rent: number
@@ -175,6 +207,11 @@ export type MonthlyReport = {
     deposits: number
     mealCost: number
     expenses: number
+    regularExpenses: number
+    billableExpenses: number
+    previousBalances: number
+    grossPayable: number
+    netDue: number
     rent: number
     bazarContributions: number
     expenseContributions: number
@@ -214,6 +251,11 @@ export type MemberReport = {
   mealRate: number
   mealCost: number
   expenseShare: number
+  regularShare: number
+  billableShare: number
+  previousBalance: number
+  grossPayable: number
+  netDue: number
   bazarContribution: number
   expenseContribution: number
   totalDeposit: number
@@ -272,6 +314,7 @@ export type ExpensePayload = {
   amount: number
   description?: string
   category: ExpenseCategory
+  expenseType: ExpenseType
   expenseDate: string
   paidBy?: { id: number }
 }
@@ -288,4 +331,11 @@ export type RentPayload = {
   member: { id: number }
   month: { id: number }
   amount: number
+}
+
+export type PreviousBalancePayload = {
+  member: { id: number }
+  month: { id: number }
+  amount: number
+  description?: string
 }

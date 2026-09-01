@@ -83,7 +83,7 @@ export const meals = pgTable(
       .notNull()
       .references(() => months.id, { onDelete: 'cascade' }),
     recordDate: date('record_date').notNull(),
-    breakfastCount: integer('breakfast_count').notNull().default(1),
+    breakfastCount: integer('breakfast_count').notNull().default(0),
     lunchCount: integer('lunch_count').notNull().default(1),
     dinnerCount: integer('dinner_count').notNull().default(1),
     status: varchar('status', { length: 10 }).notNull().default('approved'),
@@ -121,6 +121,7 @@ export const expenses = pgTable('expense', {
   amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
   description: varchar('description', { length: 255 }),
   category: varchar('category', { length: 20 }).notNull(),
+  expenseType: varchar('expense_type', { length: 20 }).notNull().default('billable'),
   expenseDate: date('expense_date').notNull().defaultNow(),
   paidById: integer('paid_by_id').references(() => members.id, { onDelete: 'set null' }),
   status: varchar('status', { length: 10 }).notNull().default('approved'),
@@ -143,6 +144,24 @@ export const deposits = pgTable('deposit', {
   description: varchar('description', { length: 255 }),
   ...auditFields,
 })
+
+// ── Previous Balances ──────────────────────────────────
+export const previousBalances = pgTable(
+  'previous_balance',
+  {
+    id: serial('id').primaryKey(),
+    memberId: integer('member_id')
+      .notNull()
+      .references(() => members.id, { onDelete: 'cascade' }),
+    monthId: integer('month_id')
+      .notNull()
+      .references(() => months.id, { onDelete: 'cascade' }),
+    amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
+    description: varchar('description', { length: 255 }),
+    ...auditFields,
+  },
+  (t) => [uniqueIndex('previous_balance_member_month_idx').on(t.memberId, t.monthId)],
+)
 
 // ── Rents ──────────────────────────────────────────────
 export const rents = pgTable(
@@ -179,6 +198,7 @@ export const membersRelations = relations(members, ({ one, many }) => ({
   bazar: many(bazar),
   deposits: many(deposits),
   rents: many(rents),
+  previousBalances: many(previousBalances),
 }))
 
 export const monthsRelations = relations(months, ({ one, many }) => ({
@@ -191,6 +211,7 @@ export const monthsRelations = relations(months, ({ one, many }) => ({
   expenses: many(expenses),
   deposits: many(deposits),
   rents: many(rents),
+  previousBalances: many(previousBalances),
 }))
 
 export const mealsRelations = relations(meals, ({ one }) => ({
@@ -244,6 +265,17 @@ export const rentsRelations = relations(rents, ({ one }) => ({
   }),
   month: one(months, {
     fields: [rents.monthId],
+    references: [months.id],
+  }),
+}))
+
+export const previousBalancesRelations = relations(previousBalances, ({ one }) => ({
+  member: one(members, {
+    fields: [previousBalances.memberId],
+    references: [members.id],
+  }),
+  month: one(months, {
+    fields: [previousBalances.monthId],
     references: [months.id],
   }),
 }))

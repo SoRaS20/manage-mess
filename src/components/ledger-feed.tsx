@@ -32,6 +32,7 @@ const TYPE_META: Record<LedgerEntryType, { label: string; className: string }> =
   expense: { label: 'Expense', className: 'bg-destructive/10 text-destructive' },
   deposit: { label: 'Deposit', className: 'bg-emerald-500/10 text-emerald-600' },
   rent: { label: 'Rent', className: 'bg-muted text-muted-foreground' },
+  previous_balance: { label: 'Prev Bal', className: 'bg-orange-500/10 text-orange-600' },
 }
 
 function StatusBadge({ status }: { status?: string | null }) {
@@ -77,7 +78,7 @@ export function LedgerFeed({ monthId }: { monthId: number }) {
   const { data, isLoading } = useLedger(monthId)
 
   const totals = useMemo(() => {
-    const t: Record<LedgerEntryType, number> = { bazar: 0, expense: 0, deposit: 0, rent: 0 }
+    const t: Record<LedgerEntryType, number> = { bazar: 0, expense: 0, deposit: 0, rent: 0, previous_balance: 0 }
     for (const row of data ?? []) {
       if (row.status === 'approved' || !row.status) t[row.type] += row.amount
     }
@@ -101,7 +102,7 @@ export function LedgerFeed({ monthId }: { monthId: number }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 text-xs">
-        {(['bazar', 'expense', 'deposit', 'rent'] as LedgerEntryType[]).map((t) => (
+        {(['bazar', 'expense', 'deposit', 'rent', 'previous_balance'] as LedgerEntryType[]).map((t) => (
           <Badge key={t} variant="outline" className={cn('normal-case font-medium', TYPE_META[t].className)}>
             {TYPE_META[t].label} {formatTaka(totals[t])}
           </Badge>
@@ -128,15 +129,16 @@ export function LedgerFeed({ monthId }: { monthId: number }) {
                   <AuditInfo createdAt={row.createdAt} updatedAt={row.updatedAt} />
                 </TableCell>
                 <TableCell>
-                  <span className={cn('rounded-md px-2 py-1 text-xs font-medium capitalize', TYPE_META[row.type].className)}>
-                    {TYPE_META[row.type].label}
+                  <span className={cn('rounded-md px-2 py-1 text-xs font-medium capitalize', TYPE_META[row.type]?.className ?? 'bg-muted')}>
+                    {TYPE_META[row.type]?.label ?? row.type}
                   </span>
+                  {row.expenseType ? <span className="ml-1 rounded bg-muted px-1 py-0.5 text-[10px] capitalize">{row.expenseType}</span> : null}
                 </TableCell>
                 <TableCell>
                   <StatusBadge status={row.status} />
                 </TableCell>
                 <TableCell className="font-medium">{row.memberName ?? '—'}</TableCell>
-                <TableCell className="max-w-64 truncate text-muted-foreground">{row.description || (row.category ? row.category : '—')}</TableCell>
+                <TableCell className="max-w-64 truncate text-muted-foreground">{row.description || (row.category ? `${row.category}${row.expenseType ? ` (${row.expenseType})` : ''}` : '—')}</TableCell>
                 <TableCell className="tabular-nums text-sm">{row.entryDate ? formatDate(row.entryDate) : '—'}</TableCell>
                 <TableCell className="text-right tabular-nums font-medium">{formatTaka(row.amount)}</TableCell>
               </TableRow>

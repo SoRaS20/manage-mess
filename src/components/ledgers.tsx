@@ -9,25 +9,29 @@ import {
   useCreateBazar,
   useCreateDeposit,
   useCreateExpense,
+  useCreatePreviousBalance,
   useCreateRent,
   useDeleteBazar,
   useDeleteDeposit,
   useDeleteExpense,
+  useDeletePreviousBalance,
   useDeleteRent,
   useDeposits,
   useExpenses,
   useMembers,
+  usePreviousBalances,
   useRents,
   useUpdateBazar,
   useUpdateDeposit,
   useUpdateExpense,
+  useUpdatePreviousBalance,
   useUpdateRent,
   useApproveBazar,
   useRejectBazar,
   useApproveExpense,
   useRejectExpense,
 } from '@/api/hooks'
-import type { Bazar, Deposit, Expense, ExpenseCategory, Member, Rent } from '@/api/types'
+import type { Bazar, Deposit, Expense, ExpenseCategory, ExpenseType, Member, PreviousBalance, Rent } from '@/api/types'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Field, FormDialog } from '@/components/form-dialog'
 import { Button } from '@/components/ui/button'
@@ -57,6 +61,11 @@ const EXPENSE_CATEGORIES: Array<{ value: ExpenseCategory; label: string }> = [
   { value: 'water', label: 'Water' },
   { value: 'internet', label: 'Internet' },
   { value: 'other', label: 'Other' },
+]
+
+const EXPENSE_TYPES: Array<{ value: ExpenseType; label: string }> = [
+  { value: 'billable', label: 'Billable (wifi, current etc) — split equally' },
+  { value: 'regular', label: 'Regular — daily/other' },
 ]
 
 const amountRule = (v: string) => {
@@ -398,6 +407,7 @@ const expenseSchema = z.object({
   amount: z.string().refine(amountRule, 'Enter a valid amount'),
   description: z.string().max(255).optional(),
   category: z.enum(['gas', 'electricity', 'water', 'internet', 'other']),
+  expenseType: z.enum(['regular', 'billable']),
   expenseDate: z.string().min(1, 'Date is required'),
   paidById: z.string().optional(),
 })
@@ -419,7 +429,7 @@ export function ExpensesLedger({ monthId, closed, managerId }: { monthId: number
   return (
     <LedgerShell
       title="Expenses"
-      description="Shared bills — split equally among active members."
+      description="Two types: Regular (daily) & Billable (wifi, current etc) — Billable split equally. Total Pay = Billable share + Previous Balance + Rent."
       addLabel="Add expense"
       onAdd={() => setDialog({ open: true, edit: null })}
       disabled={closed}
@@ -435,6 +445,7 @@ export function ExpensesLedger({ monthId, closed, managerId }: { monthId: number
             <TableRow className="bg-muted/50">
               <TableHead className="font-semibold">Date</TableHead>
               <TableHead className="font-semibold">Category</TableHead>
+              <TableHead className="font-semibold">Type</TableHead>
               <TableHead className="font-semibold">Description</TableHead>
               <TableHead className="font-semibold">Paid by</TableHead>
               <TableHead className="text-right font-semibold">Amount</TableHead>
@@ -451,6 +462,11 @@ export function ExpensesLedger({ monthId, closed, managerId }: { monthId: number
                 </TableCell>
                 <TableCell>
                   <span className="rounded bg-muted px-1.5 py-0.5 text-xs capitalize">{row.category}</span>
+                </TableCell>
+                <TableCell>
+                  <span className={cn('rounded px-1.5 py-0.5 text-xs font-medium', row.expenseType === 'billable' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300')}>
+                    {row.expenseType === 'billable' ? 'Billable' : 'Regular'}
+                  </span>
                 </TableCell>
                 <TableCell className="text-muted-foreground">{row.description || '—'}</TableCell>
                 <TableCell>{row.paidByName ?? '—'}</TableCell>
@@ -506,6 +522,7 @@ export function ExpensesLedger({ monthId, closed, managerId }: { monthId: number
             amount: Number(values.amount),
             description: values.description || undefined,
             category: values.category,
+            expenseType: values.expenseType,
             expenseDate: values.expenseDate,
             paidBy: paidById ? { id: paidById } : undefined,
             status: isManagerOrAdmin ? 'approved' : 'pending',
@@ -523,7 +540,7 @@ export function ExpensesLedger({ monthId, closed, managerId }: { monthId: number
         open={deleteTarget !== null}
         onOpenChange={(v) => !v && setDeleteTarget(null)}
         title="Delete expense"
-        description={deleteTarget ? `${formatTaka(deleteTarget.amount)} · ${deleteTarget.category} on ${formatDate(deleteTarget.expenseDate)}` : undefined}
+        description={deleteTarget ? `${formatTaka(deleteTarget.amount)} · ${deleteTarget.category} (${deleteTarget.expenseType}) on ${formatDate(deleteTarget.expenseDate)}` : undefined}
         submitting={remove.isPending}
         onConfirm={async () => {
           if (!deleteTarget) return
@@ -537,8 +554,8 @@ export function ExpensesLedger({ monthId, closed, managerId }: { monthId: number
 
 function expenseFormValues(edit: Expense | null, userMemberId?: number | null) {
   return edit
-    ? { amount: String(edit.amount), description: edit.description ?? '', category: edit.category as ExpenseCategory, expenseDate: edit.expenseDate, paidById: edit.paidById != null ? String(edit.paidById) : 'none' }
-    : { amount: '', description: '', category: 'other' as const, expenseDate: todayISO(), paidById: userMemberId ? String(userMemberId) : 'none' }
+    ? { amount: String(edit.amount), description: edit.description ?? '', category: edit.category as ExpenseCategory, expenseType: (edit.expenseType as ExpenseType) ?? 'billable', expenseDate: edit.expenseDate, paidById: edit.paidById != null ? String(edit.paidById) : 'none' }
+    : { amount: '', description: '', category: 'other' as const, expenseType: 'billable' as const, expenseDate: todayISO(), paidById: userMemberId ? String(userMemberId) : 'none' }
 }
 
 function ExpenseDialog({
@@ -589,6 +606,21 @@ function ExpenseDialog({
           </Select>
         </Field>
       </div>
+      <Field label="Expense Type" error={form.formState.errors.expenseType?.message}>
+        <Select items={EXPENSE_TYPES} value={form.watch('expenseType')} onValueChange={(v) => v !== null && form.setValue('expenseType', v as ExpenseType, { shouldValidate: true })}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select type" />
+          </SelectTrigger>
+          <SelectContent>
+            {EXPENSE_TYPES.map((t) => (
+              <SelectItem key={t.value} value={t.value}>
+                {t.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="mt-1 text-[11px] text-muted-foreground">Billable = wifi, current/electricity etc — divided equally and counted in Total Pay. Regular = other daily costs.</p>
+      </Field>
       <Field label="Description" error={form.formState.errors.description?.message}>
         <Input {...form.register('description')} placeholder="e.g. Electricity bill" />
       </Field>
@@ -883,6 +915,134 @@ function RentDialog({
       </Field>
       <Field label="Rent (BDT)" error={form.formState.errors.amount?.message}>
         <Input type="number" step="0.01" min={0} {...form.register('amount')} />
+      </Field>
+    </FormDialog>
+  )
+}
+
+// ---------- Previous Balances ----------
+
+const previousBalanceSchema = z.object({
+  memberId: z.string().min(1, 'Select a member'),
+  amount: z.string().refine(amountRule, 'Enter a valid amount'),
+  description: z.string().max(255).optional(),
+})
+
+type PreviousBalanceForm = z.infer<typeof previousBalanceSchema>
+
+export function PreviousBalancesLedger({ monthId, closed, managerId }: { monthId: number; closed: boolean; managerId: number | null }) {
+  const user = useAuthStore((s) => s.user)
+  const isManagerOrAdmin = user?.role === 'ADMIN' || (user?.memberId !== null && user?.memberId === managerId)
+  const { data, isLoading } = usePreviousBalances(monthId)
+  const create = useCreatePreviousBalance(monthId)
+  const update = useUpdatePreviousBalance(monthId)
+  const remove = useDeletePreviousBalance(monthId)
+  const [dialog, setDialog] = useState<{ open: boolean; edit: PreviousBalance | null }>({ open: false, edit: null })
+  const [deleteTarget, setDeleteTarget] = useState<PreviousBalance | null>(null)
+
+  return (
+    <LedgerShell
+      title="Previous Balances"
+      description="Dues carried from previous month — added to Total Pay (Gross = Billable share + Previous Balance + Rent)."
+      addLabel="Add previous balance"
+      onAdd={() => setDialog({ open: true, edit: null })}
+      disabled={closed || !isManagerOrAdmin}
+      count={data?.length}
+    >
+      {isLoading ? (
+        <LoadingRows />
+      ) : !data?.length ? (
+        <Empty text="No previous balances this month. Add dues carried forward per member." />
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50">
+              <TableHead className="font-semibold">Member</TableHead>
+              <TableHead className="font-semibold">Description</TableHead>
+              <TableHead className="text-right font-semibold">Amount</TableHead>
+              <TableHead className="text-right font-semibold">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.map((row) => (
+              <TableRow key={row.id} className="transition-colors hover:bg-muted/30">
+                <TableCell className="font-medium">{row.memberName}</TableCell>
+                <TableCell className="text-muted-foreground">{row.description || '—'}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatTaka(row.amount)}</TableCell>
+                <TableCell>
+                  <RowActions disabled={closed || !isManagerOrAdmin} onEdit={() => setDialog({ open: true, edit: row })} onDelete={() => setDeleteTarget(row)} />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+
+      <PreviousBalanceDialog
+        monthId={monthId}
+        open={dialog.open}
+        edit={dialog.edit}
+        submitting={create.isPending || update.isPending}
+        onOpenChange={(v) => setDialog((d) => ({ ...d, open: v }))}
+        onSubmit={async (values, existing) => {
+          const payload = { member: { id: Number(values.memberId) }, month: { id: monthId }, amount: Number(values.amount), description: values.description || undefined }
+          if (existing) await update.mutateAsync({ id: existing.id, data: payload })
+          else await create.mutateAsync(payload)
+          setDialog({ open: false, edit: null })
+        }}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(v) => !v && setDeleteTarget(null)}
+        title="Remove previous balance"
+        description={deleteTarget ? `${deleteTarget.memberName}'s previous balance of ${formatTaka(deleteTarget.amount)} will be removed.` : undefined}
+        submitting={remove.isPending}
+        onConfirm={async () => {
+          if (!deleteTarget) return
+          await remove.mutateAsync(deleteTarget.id)
+          setDeleteTarget(null)
+        }}
+      />
+    </LedgerShell>
+  )
+}
+
+function PreviousBalanceDialog({
+  monthId: _monthId,
+  open,
+  edit,
+  submitting,
+  onOpenChange,
+  onSubmit,
+}: {
+  monthId: number
+  open: boolean
+  edit: PreviousBalance | null
+  submitting: boolean
+  onOpenChange: (v: boolean) => void
+  onSubmit: (values: PreviousBalanceForm, existing: PreviousBalance | null) => Promise<void>
+}) {
+  const form = useForm<PreviousBalanceForm>({
+    resolver: zodResolver(previousBalanceSchema),
+    values: edit ? { memberId: String(edit.memberId), amount: String(edit.amount), description: edit.description ?? '' } : { memberId: '', amount: '', description: '' },
+  })
+  return (
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={edit ? 'Update previous balance' : 'Add previous balance'}
+      submitting={submitting}
+      onSubmit={form.handleSubmit(async (v) => onSubmit(v, edit))}
+    >
+      <Field label="Member" error={form.formState.errors.memberId?.message}>
+        <MemberSelectField value={form.watch('memberId')} onChange={(id) => form.setValue('memberId', id, { shouldValidate: true })} />
+      </Field>
+      <Field label="Amount (BDT)" error={form.formState.errors.amount?.message}>
+        <Input type="number" step="0.01" {...form.register('amount')} placeholder="e.g. 500 for dues owed" />
+      </Field>
+      <Field label="Description" error={form.formState.errors.description?.message}>
+        <Input {...form.register('description')} placeholder="e.g. Carried from last month" />
       </Field>
     </FormDialog>
   )

@@ -8,7 +8,7 @@ import { useAuthStore } from '@/store/auth'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { MealsGrid } from '@/components/meals-grid'
 import { LedgerFeed } from '@/components/ledger-feed'
-import { BazarLedger, DepositsLedger, ExpensesLedger, RentsLedger } from '@/components/ledgers'
+import { BazarLedger, DepositsLedger, ExpensesLedger, PreviousBalancesLedger, RentsLedger } from '@/components/ledgers'
 import { ReportsTab } from '@/components/reports-tab'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -25,7 +25,7 @@ import { monthLabel } from '@/lib/format'
 
 
 const monthDetailSearchSchema = z.object({
-  tab: z.enum(['meals', 'bazar', 'expenses', 'deposits', 'rents', 'ledger', 'reports']).optional(),
+  tab: z.enum(['meals', 'bazar', 'expenses', 'deposits', 'rents', 'previous', 'ledger', 'reports']).optional(),
 })
 
 export const Route = createFileRoute('/months/$monthId')({
@@ -165,6 +165,7 @@ function MonthDetailPage() {
           <TabsTrigger value="expenses" className="flex-none">Expenses</TabsTrigger>
           <TabsTrigger value="deposits" className="flex-none">Deposits</TabsTrigger>
           <TabsTrigger value="rents" className="flex-none">Rents</TabsTrigger>
+          <TabsTrigger value="previous" className="flex-none">Prev Bal</TabsTrigger>
           <TabsTrigger value="ledger" className="flex-none">Ledger</TabsTrigger>
           <TabsTrigger value="reports" className="flex-none">Reports</TabsTrigger>
         </TabsList>
@@ -182,6 +183,9 @@ function MonthDetailPage() {
         </TabsContent>
         <TabsContent value="rents">
           <RentsLedger monthId={id} closed={closed} managerId={month.managerId ?? null} />
+        </TabsContent>
+        <TabsContent value="previous">
+          <PreviousBalancesLedger monthId={id} closed={closed} managerId={month.managerId ?? null} />
         </TabsContent>
         <TabsContent value="ledger">
           <LedgerFeed monthId={id} />
