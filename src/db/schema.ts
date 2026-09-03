@@ -9,7 +9,7 @@ import {
   uniqueIndex,
   varchar,
 } from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
+import { relations, sql } from 'drizzle-orm'
 
 type EntryStatus = 'pending' | 'approved' | 'rejected'
 
@@ -68,7 +68,7 @@ export const months = pgTable(
     managerId: integer('manager_id').references(() => members.id, { onDelete: 'set null' }),
     ...auditFields,
   },
-  (t) => [uniqueIndex('mess_month_year_month_no_idx').on(t.year, t.monthNo)],
+  (t) => [uniqueIndex('mess_month_year_month_no_idx').on(t.year, t.monthNo).where(sql`${t.deletedAt} IS NULL`)],
 )
 
 // ── Meals ──────────────────────────────────────────────
@@ -91,7 +91,7 @@ export const meals = pgTable(
     approvedAt: timestamp('approved_at'),
     ...auditFields,
   },
-  (t) => [uniqueIndex('meal_member_date_idx').on(t.memberId, t.recordDate)],
+  (t) => [uniqueIndex('meal_member_date_idx').on(t.memberId, t.recordDate).where(sql`${t.deletedAt} IS NULL`)],
 )
 
 // ── Bazar ──────────────────────────────────────────────
@@ -160,7 +160,7 @@ export const previousBalances = pgTable(
     description: varchar('description', { length: 255 }),
     ...auditFields,
   },
-  (t) => [uniqueIndex('previous_balance_member_month_idx').on(t.memberId, t.monthId)],
+  (t) => [uniqueIndex('previous_balance_member_month_idx').on(t.memberId, t.monthId).where(sql`${t.deletedAt} IS NULL`)],
 )
 
 // ── Rents ──────────────────────────────────────────────
@@ -177,7 +177,7 @@ export const rents = pgTable(
     amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
     ...auditFields,
   },
-  (t) => [uniqueIndex('rent_member_month_idx').on(t.memberId, t.monthId)],
+  (t) => [uniqueIndex('rent_member_month_idx').on(t.memberId, t.monthId).where(sql`${t.deletedAt} IS NULL`)],
 )
 
 // ── Relations ──────────────────────────────────────────

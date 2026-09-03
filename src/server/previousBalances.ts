@@ -33,13 +33,30 @@ export const createPreviousBalance = createServerFn({ method: 'POST' as const })
   .handler(async ({ data }) => {
     await assertMonthOpen(data.monthId)
 
+    // Check for existing (including soft-deleted) to handle unique index and allow restore
     const [existing] = await db
       .select()
       .from(previousBalances)
-      .where(and(eq(previousBalances.memberId, data.memberId), eq(previousBalances.monthId, data.monthId), isNull(previousBalances.deletedAt)))
+      .where(and(eq(previousBalances.memberId, data.memberId), eq(previousBalances.monthId, data.monthId)))
       .limit(1)
 
     if (existing) {
+      if (existing.deletedAt) {
+        // Restore soft-deleted row
+        const [restored] = await db
+          .update(previousBalances)
+          .set({
+            amount: String(data.amount),
+            description: data.description || null,
+            updatedBy: data.userId ?? null,
+            deletedAt: null,
+            deletedBy: null,
+          })
+          .where(eq(previousBalances.id, existing.id))
+          .returning()
+        return restored
+      }
+      // Update existing active row
       const [updated] = await db
         .update(previousBalances)
         .set({ amount: String(data.amount), description: data.description || null, updatedBy: data.userId ?? null })
@@ -48,17 +65,44 @@ export const createPreviousBalance = createServerFn({ method: 'POST' as const })
       return updated
     }
 
-    const [created] = await db
-      .insert(previousBalances)
-      .values({
-        memberId: data.memberId,
-        monthId: data.monthId,
-        amount: String(data.amount),
-        description: data.description || null,
-        createdBy: data.userId ?? null,
-      })
-      .returning()
-    return created
+    // No existing — try insert, handle race condition where concurrent soft-deleted row exists
+    try {
+      const [created] = await db
+        .insert(previousBalances)
+        .values({
+          memberId: data.memberId,
+          monthId: data.monthId,
+          amount: String(data.amount),
+          description: data.description || null,
+          createdBy: data.userId ?? null,
+        })
+        .returning()
+      return created
+    } catch (err: any) {
+      if (err?.code === '23505' || err?.cause?.code === '23505') {
+        // Unique violation — fetch again and update (covers soft-deleted case where insert hit unique index)
+        const [conflict] = await db
+          .select()
+          .from(previousBalances)
+          .where(and(eq(previousBalances.memberId, data.memberId), eq(previousBalances.monthId, data.monthId)))
+          .limit(1)
+        if (conflict) {
+          const [updated] = await db
+            .update(previousBalances)
+            .set({
+              amount: String(data.amount),
+              description: data.description || null,
+              updatedBy: data.userId ?? null,
+              deletedAt: null,
+              deletedBy: null,
+            })
+            .where(eq(previousBalances.id, conflict.id))
+            .returning()
+          return updated
+        }
+      }
+      throw err
+    }
   })
 
 export const updatePreviousBalance = createServerFn({ method: 'POST' as const })

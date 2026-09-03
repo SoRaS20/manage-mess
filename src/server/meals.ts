@@ -80,6 +80,31 @@ export const createMeal = createServerFn({ method: 'POST' as const })
       throw new Error('Cannot create meals for past dates.')
     }
 
+    // Unique is on (member_id, record_date) — handle existing (including soft-deleted) by updating/undeleting
+    const [existing] = await db
+      .select()
+      .from(meals)
+      .where(and(eq(meals.memberId, data.memberId), eq(meals.recordDate, data.recordDate)))
+      .limit(1)
+
+    if (existing) {
+      const [updated] = await db
+        .update(meals)
+        .set({
+          monthId: data.monthId,
+          breakfastCount: data.breakfastCount,
+          lunchCount: data.lunchCount,
+          dinnerCount: data.dinnerCount,
+          status: data.status || existing.status || 'approved',
+          updatedBy: data.userId ?? null,
+          deletedAt: null,
+          deletedBy: null,
+        })
+        .where(eq(meals.id, existing.id))
+        .returning()
+      return updated
+    }
+
     const [created] = await db
       .insert(meals)
       .values({
@@ -226,7 +251,7 @@ export const generateMeals = createServerFn({ method: 'POST' as const })
         const existing = await db
           .select()
           .from(meals)
-          .where(and(eq(meals.memberId, member.id), eq(meals.recordDate, dateStr), isNull(meals.deletedAt)))
+          .where(and(eq(meals.memberId, member.id), eq(meals.recordDate, dateStr)))
           .limit(1)
         if (existing.length === 0) {
           await db.insert(meals).values({
@@ -239,6 +264,22 @@ export const generateMeals = createServerFn({ method: 'POST' as const })
             status: 'approved',
             createdBy: data.userId ?? null,
           })
+          created++
+        } else if (existing[0].deletedAt) {
+          // Restore soft-deleted meal (unique would block insert)
+          await db
+            .update(meals)
+            .set({
+              monthId: data.monthId,
+              breakfastCount: 0,
+              lunchCount: 1,
+              dinnerCount: 1,
+              status: 'approved',
+              updatedBy: data.userId ?? null,
+              deletedAt: null,
+              deletedBy: null,
+            })
+            .where(eq(meals.id, existing[0].id))
           created++
         }
       }

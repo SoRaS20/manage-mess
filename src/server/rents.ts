@@ -41,7 +41,12 @@ export const createRent = createServerFn({ method: 'POST' as const })
     if (existing) {
       const [updated] = await db
         .update(rents)
-        .set({ amount: String(data.amount), updatedBy: data.userId ?? null })
+        .set({
+          amount: String(data.amount),
+          updatedBy: data.userId ?? null,
+          deletedAt: null,
+          deletedBy: null,
+        })
         .where(eq(rents.id, existing.id))
         .returning()
       return updated

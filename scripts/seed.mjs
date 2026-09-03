@@ -14,16 +14,14 @@ const pool = new pg.Pool({ connectionString: DATABASE_URL })
 
 async function seed() {
   try {
-    // ── 1. Drop everything ──────────────────────────────
-    console.log('[seed] Dropping all data...')
-    await pool.query(
-      `TRUNCATE TABLE rent, deposit, expense, bazar, meal, mess_month, member, app_user RESTART IDENTITY CASCADE;`
-    )
-
-    // ── 2. Push schema (creates tables with new columns) ──
+    // ── Idempotent seed: never deletes existing data ────
+    // This script is safe to run via `pnpm dev` — it will only INSERT missing rows
+    // using ON CONFLICT DO NOTHING and SELECT checks. Re-running will not modify
+    // existing rows (passwords, members, months remain untouched).
+    console.log('[seed] Running idempotent seed (no data will be deleted)...')
     console.log('[seed] Schema is managed by drizzle-kit push — run that first if needed.')
 
-    // ── 3. Create users ────────────────────────────────
+    // ── 1. Create users (ON CONFLICT DO NOTHING) ──────
     const hash = await bcrypt.hash('pass123', 10)
 
     const usersData = [
@@ -38,16 +36,29 @@ async function seed() {
     ]
 
     const userIds = {}
+    let usersCreated = 0
+    let usersSkipped = 0
     for (const u of usersData) {
+      // Try to insert, ignore if username already exists
       const res = await pool.query(
-        `INSERT INTO app_user (username, user_password, role, created_at, created_by) VALUES ($1, $2, $3, NOW(), NULL) RETURNING id`,
+        `INSERT INTO app_user (username, user_password, role, created_at, created_by)
+         VALUES ($1, $2, $3, NOW(), NULL)
+         ON CONFLICT (username) DO NOTHING
+         RETURNING id`,
         [u.username, u.password, u.role],
       )
-      userIds[u.username] = res.rows[0].id
+      if (res.rows.length > 0) {
+        userIds[u.username] = res.rows[0].id
+        usersCreated++
+      } else {
+        const existing = await pool.query(`SELECT id FROM app_user WHERE username = $1`, [u.username])
+        userIds[u.username] = existing.rows[0].id
+        usersSkipped++
+      }
     }
-    console.log(`[seed] Created ${usersData.length} users`)
+    console.log(`[seed] Users: ${usersCreated} created, ${usersSkipped} already existed (skipped)`)
 
-    // ── 4. Create members ──────────────────────────────
+    // ── 2. Create members (check by name, then INSERT) ─
     const membersData = [
       { name: 'Sohan', phone: '01710000001', joinDate: '2026-01-01', userId: userIds.sohan },
       { name: 'Arif Vai', phone: '01710000002', joinDate: '2026-01-01', userId: userIds.arifvai },
@@ -58,28 +69,67 @@ async function seed() {
     ]
 
     const memberIds = {}
+    let membersCreated = 0
+    let membersSkipped = 0
     for (const m of membersData) {
+      const existing = await pool.query(`SELECT id FROM member WHERE name = $1 LIMIT 1`, [m.name])
+      if (existing.rows.length > 0) {
+        memberIds[m.name] = existing.rows[0].id
+        membersSkipped++
+        continue
+      }
+      // Also guard against duplicate phone where unique not enforced but we still avoid duplicates
+      const phoneExists = await pool.query(`SELECT id FROM member WHERE phone = $1 LIMIT 1`, [m.phone])
+      if (phoneExists.rows.length > 0) {
+        memberIds[m.name] = phoneExists.rows[0].id
+        membersSkipped++
+        continue
+      }
       const res = await pool.query(
-        `INSERT INTO member (name, phone, join_date, active, banned, user_id, created_at, created_by) VALUES ($1, $2, $3, true, false, $4, NOW(), NULL) RETURNING id, name`,
+        `INSERT INTO member (name, phone, join_date, active, banned, user_id, created_at, created_by)
+         VALUES ($1, $2, $3, true, false, $4, NOW(), NULL) RETURNING id`,
         [m.name, m.phone, m.joinDate, m.userId],
       )
       memberIds[m.name] = res.rows[0].id
+      membersCreated++
     }
-    console.log(`[seed] Created ${membersData.length} members`)
+    console.log(`[seed] Members: ${membersCreated} created, ${membersSkipped} already existed (skipped)`)
 
-    // ── 5. Create current month with manager ───────────
+    // ── 3. Create current month with manager (ON CONFLICT DO NOTHING) ──
     const now = new Date()
     const year = now.getFullYear()
     const monthNo = now.getMonth() + 1
     const managerName = 'Sohan'
     const managerId = memberIds[managerName]
 
-    const monthRes = await pool.query(
-      `INSERT INTO mess_month (year, month_no, closed, manager_id, created_at, created_by) VALUES ($1, $2, false, $3, NOW(), NULL) RETURNING id`,
-      [year, monthNo, managerId],
-    )
-    const monthId = monthRes.rows[0].id
-    console.log(`[seed] Created month ${year}-${String(monthNo).padStart(2, '0')} with manager "${managerName}"`)
+    let monthId
+    let monthCreated = false
+    const monthExisting = await pool.query(`SELECT id, manager_id FROM mess_month WHERE year = $1 AND month_no = $2 LIMIT 1`, [year, monthNo])
+    if (monthExisting.rows.length > 0) {
+      monthId = monthExisting.rows[0].id
+      console.log(`[seed] Month ${year}-${String(monthNo).padStart(2, '0')} already exists (id=${monthId}), skipped`)
+    } else {
+      if (!managerId) {
+        console.warn(`[seed] Manager "${managerName}" not found, creating month without manager`)
+      }
+      const monthRes = await pool.query(
+        `INSERT INTO mess_month (year, month_no, closed, manager_id, created_at, created_by)
+         VALUES ($1, $2, false, $3, NOW(), NULL)
+         ON CONFLICT (year, month_no) DO NOTHING
+         RETURNING id`,
+        [year, monthNo, managerId ?? null],
+      )
+      if (monthRes.rows.length > 0) {
+        monthId = monthRes.rows[0].id
+        monthCreated = true
+        console.log(`[seed] Created month ${year}-${String(monthNo).padStart(2, '0')} with manager "${managerName}" (id=${monthId})`)
+      } else {
+        // Race condition: another process created it
+        const retry = await pool.query(`SELECT id FROM mess_month WHERE year = $1 AND month_no = $2 LIMIT 1`, [year, monthNo])
+        monthId = retry.rows[0].id
+        console.log(`[seed] Month ${year}-${String(monthNo).padStart(2, '0')} already exists after conflict (id=${monthId})`)
+      }
+    }
 
     // ── 6. Summary ─────────────────────────────────────
     console.log('\n═══════════════════════════════════════════')

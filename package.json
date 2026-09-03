@@ -4,12 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/seed.mjs && vite dev",
+    "dev": "vite dev",
+    "dev:seed": "node scripts/seed.mjs && vite dev",
     "build": "vite build",
     "lint": "oxlint",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit migrate",
+    "db:seed": "node scripts/seed.mjs",
     "db:reset": "node scripts/reset-db.mjs",
     "db:studio": "drizzle-kit studio"
   },
